@@ -17,10 +17,12 @@
 5. 按照各自的规则写入 mtval
 6. 修改 mcause
 7. 直接跳转到 mtvec
-## 目前实现的返回机制
+## 要实现的返回机制
 1. 根据返回指令类型将 MPP/SPP 加载到特权级，MPP/SPP 清零
 2. 修改 MIE/SIE，MPIE/SPIE 置 1
-3. 跳转到 mepc
+3. 跳转到 mepc/sepc
+* mret: 读取 MPP, MPIE, mepc, 修改特权级，MPP, MIE, MPIE
+* sret: 读取 SPP, SPIE, sepc, 修改特权级，SPP, SIE, SPIE
 ## 要实现的异常处理机制
 1. 将发现的先后顺序作为优先级选出异常
 2. 如果有异常，依据 medeleg 将权限改为 M/S，但 M 时必须设 M
@@ -29,6 +31,8 @@
 5. 按照各自的规则写入 mtval/stval
 6. 修改 mcause/scause
 7. 直接跳转到 mtvec/stvec
+* 读取 medeleg, 特权级，MIE, mtvec, 修改特权级, MPP, MIE, MPIE, mtval, mepc, mcause
+* 读取 medeleg, 特权级，SIE, stvec, 修改特权级, SPP, SIE, SPIE, stval, sepc, scause
 ## 中断处理机制
 1. 每周期检查 mip 中有没有 1
 2. 若有 1，且 mie 对应位 = 1
@@ -40,3 +44,5 @@
 8. mtval/stval 设置 0
 9. 修改 mcause/scause
 10. 直接跳转到 mtvec/stvec
+* 读取 mip, mie, mideleg, 特权级, MIE, mtvec, 修改 MPP, MPIE, MIE, mepc, mtval, mcause
+* 读取 mip, mie, mideleg, 特权级, SIE, stvec, 修改 SPP, SPIE, SIE, sepc, stval, scause

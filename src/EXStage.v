@@ -24,6 +24,7 @@ module EXStage (
     input EXPredTaken,
     input EXRegWr,
     input EXRet,
+    input EXRetType,
     input [1:0] EXALUASrc,
     input [1:0] EXALUBSrc,
     input [1:0] EXCSRSrc,
@@ -39,6 +40,7 @@ module EXStage (
     input [31:0] EXimm,
     input [31:0] EXInstr,
     input [31:0] EXPC,
+    input [31:0] EXPCCtrPC1,
     input [31:0] EXPCPlus4,
     output reg M1ZF,
     output reg M1CF,
@@ -57,6 +59,7 @@ module EXStage (
     output reg M1PredTaken,
     output reg M1RegWr,
     output reg M1Ret,
+    output reg M1RetType,
     output reg [2:0] M1MemCtr,
     output reg [2:0] M1RegSrc,
     output reg [4:0] M1BranchCtr,
@@ -70,6 +73,7 @@ module EXStage (
     output reg [31:0] M1imm,
     output reg [31:0] M1Instr,
     output reg [31:0] M1PC,
+    output reg [31:0] M1PCCtrPC1,
     output reg [31:0] M1PCPlus4
 );
 
@@ -101,6 +105,7 @@ always @(posedge CLK or posedge RST) begin
         M1PredTaken <= 1'h0;
         M1RegWr <= 1'h1;
         M1Ret <= 1'h0;
+        M1RetType <= 1'h0;
         M1MemCtr <= 3'h2;
         M1RegSrc <= 3'h0;
         M1BranchCtr <= 5'h0;
@@ -114,6 +119,7 @@ always @(posedge CLK or posedge RST) begin
         M1imm <= 32'h0;
         M1Instr <= 32'h13;
         M1PC <= 32'h0;
+        M1PCCtrPC1 <= 32'h4;
         M1PCPlus4 <= 32'h4;
     end
     else if (Flush) begin
@@ -134,6 +140,7 @@ always @(posedge CLK or posedge RST) begin
         M1PredTaken <= 1'h0;
         M1RegWr <= 1'h1;
         M1Ret <= 1'h0;
+        M1RetType <= 1'h0;
         M1MemCtr <= 3'h2;
         M1RegSrc <= 3'h0;
         M1BranchCtr <= 5'h0;
@@ -147,6 +154,7 @@ always @(posedge CLK or posedge RST) begin
         M1imm <= 32'h0;
         M1Instr <= 32'h13;
         M1PC <= 32'h0;
+        M1PCCtrPC1 <= 32'h4;
         M1PCPlus4 <= 32'h4;
     end
     else if (!Stall) begin
@@ -167,6 +175,7 @@ always @(posedge CLK or posedge RST) begin
         M1PredTaken <= EXPredTaken;
         M1RegWr <= EXRegWr;
         M1Ret <= EXRet;
+        M1RetType <= EXRetType;
         M1MemCtr <= EXMemCtr;
         M1RegSrc <= EXRegSrc;
         M1BranchCtr <= EXBranchCtr;
@@ -180,6 +189,7 @@ always @(posedge CLK or posedge RST) begin
         M1imm <= EXimm;
         M1Instr <= EXInstr;
         M1PC <= EXPC;
+        M1PCCtrPC1 <= EXPCCtrPC1;
         M1PCPlus4 <= EXPCPlus4;
     end
 end

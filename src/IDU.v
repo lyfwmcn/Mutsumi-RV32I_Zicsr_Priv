@@ -16,6 +16,7 @@ module IDU (
     output PredTaken,
     output RegWr,
     output Ret,
+    output RetType,
     output [1:0] ALUASrc,
     output [1:0] ALUBSrc,
     output [1:0] CSRSrc,
@@ -139,7 +140,8 @@ assign InstrFault = InstrFaults[optype];
 assign Ebreak = !InstrFault && optype == 4'hc && SystemCode == 12'h1;
 assign Ecall = !InstrFault && optype == 4'hc && SystemCode == 12'h0;
 assign RegWr = InstrFault ? 1'h1 : optype != 4'h7 && optype != 4'h8 && optype != 4'hc;
-assign Ret = !InstrFault && optype == 4'hc && SystemCode == 12'h302;
+assign Ret = !InstrFault && optype == 4'hc && (SystemCode == 12'h302 || SystemCode == 12'h102);
+assign RetType = !InstrFault && SystemCode == 12'h102;
 assign CSRWr = !InstrFault && ((optype == 4'ha && CSRRXWr) || (optype == 4'hb && CSRRXIWr));
 assign IsCSR = !InstrFault && (optype == 4'ha || optype == 4'hb);
 assign BusAused = InstrFault ? 1'h1 : optype != 4'h5 && optype != 4'h6 && optype != 4'h9 && optype != 4'hb && optype != 4'hc && (optype != 4'ha || CSRRXWr);

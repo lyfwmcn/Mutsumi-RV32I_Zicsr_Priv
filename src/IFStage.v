@@ -6,10 +6,14 @@ module IFStage (
     input RST,
     input Flush,
     input Ret,
+    input RetType,
     input Stall,
     input Trap,
+    input TrapType,
     input [31:0] mepc,
     input [31:0] mtvec,
+    input [31:0] sepc,
+    input [31:0] stvec,
 
     // 外部通信参数
     input Respond_Fault_Instr,
@@ -23,7 +27,8 @@ module IFStage (
     input [31:0] M2ObjAddr,
     input [31:0] M2Offset,
     output M2InstrAlignFault,
-    output [31:0] M2PCCtrPC,
+    output [31:0] IDPCCtrPC1,
+    output [31:0] M2PCCtrPC2,
 
     // 流水线参数
     output IDInstrAccessFault,
@@ -42,20 +47,26 @@ assign IDInstrPageFault = 1'h0;
 assign IDIsInstr = !Empty && !IDInstrAccessFault && !IDInstrPageFault;
 assign IDPCPlus4 = IDPC + 32'h4;
 
+assign IDPCCtrPC1 = M2PCCtrPC2;
+
 PCReg PCReg (
     .CLK(CLK),
     .RST(RST),
     .PCCtr(M2PCCtr),
     .Stall(Stall || Full),
     .Ret(Ret),
+    .RetType(RetType),
     .Trap(Trap),
+    .TrapType(TrapType),
     .mepc(mepc),
     .mtvec(mtvec),
     .ObjAddr(M2ObjAddr),
     .Offset(M2Offset),
+    .sepc(sepc),
+    .stvec(stvec),
     .InstrAlignFault(M2InstrAlignFault),
     .PC(Request_Addr_Instr),
-    .PCCtrPC(M2PCCtrPC)
+    .PCCtrPC(M2PCCtrPC2)
 );
 
 InstrBufferUnit InstrBufferUnit (

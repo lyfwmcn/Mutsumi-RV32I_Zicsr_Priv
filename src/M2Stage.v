@@ -5,19 +5,40 @@ module M2Stage (
     input CLK,
     input RST,
     input Flush,
+    input MIE,
+    input MPIE,
+    input SIE,
+    input SPIE,
+    input SPP,
     input [1:0] MPP,
     input [1:0] Privilege,
+    input [31:0] medeleg,
+    input [31:0] mepc,
+    input [31:0] mideleg,
+    input [31:0] mie,
+    input [31:0] mip,
+    input [31:0] sepc,
     output ActualJump,
     output MemWait,
+    output NextMIE,
+    output NextMPIE,
+    output NextSIE,
+    output NextSPIE,
+    output NextSPP,
     output PredJump,
     output PrivilegeChange,
     output Ret,
+    output RetType,
     output Trap,
+    output TrapType,
     output [1:0] NextMPP,
     output [1:0] NextPrivilege,
     output [31:0] Nextmcause,
     output [31:0] Nextmepc,
     output [31:0] Nextmtval,
+    output [31:0] Nextscause,
+    output [31:0] Nextsepc,
+    output [31:0] Nextstval,
 
     // 外部通信参数
     input Respond_Fault_Data,
@@ -30,7 +51,7 @@ module M2Stage (
     input [4:0] IDBranchCtr,
     input [31:0] IDimm,
     input [31:0] IDPC,
-    input [31:0] M2PCCtrPC,
+    input [31:0] M2PCCtrPC2,
     output M2PCCtr,
     output [31:0] M2ObjAddr,
     output [31:0] M2Offset,
@@ -54,6 +75,7 @@ module M2Stage (
     input M2PredTaken,
     input M2RegWr,
     input M2Ret,
+    input M2RetType,
     input M2StoreAlignFault,
     input [2:0] M2MemCtr,
     input [2:0] M2RegSrc,
@@ -68,6 +90,7 @@ module M2Stage (
     input [31:0] M2imm,
     input [31:0] M2Instr,
     input [31:0] M2PC,
+    input [31:0] M2PCCtrPC1,
     input [31:0] M2PCPlus4,
     output reg WBCSRWr,
     output reg WBIsCSR,
@@ -84,8 +107,11 @@ module M2Stage (
     output reg [31:0] WBPCPlus4
 );
 
+reg [31:0] WBnextPC;
+
 assign MemWait = (M2DataREN || M2DataWEN) && !Respond_Valid_Data;
 assign Ret = M2Ret;
+assign RetType = M2RetType;
 
 wire [31:0] Data8S [3:0];
 assign Data8S[0] = {{24{Respond_Data_Data[7]}}, Respond_Data_Data[7:0]};
@@ -129,6 +155,8 @@ assign M2StoreAccessFault = M2DataWEN && Respond_Valid_Data && Respond_Fault_Dat
 assign M2LoadPageFault = 1'h0;
 assign M2StorePageFault = 1'h0;
 
+wire [31:0] M2nextPC;
+
 BU BU (
     .M2ZF(M2ZF),
     .M2CF(M2CF),
@@ -143,9 +171,13 @@ BU BU (
     .M2BusA(M2BusA),
     .M2imm(M2imm),
     .M2PC(M2PC),
+    .M2PCCtrPC1(M2PCCtrPC1),
+    .M2PCCtrPC2(M2PCCtrPC2),
+    .M2PCPlus4(M2PCPlus4),
     .ActualJump(ActualJump),
     .M2PCCtr(M2PCCtr),
     .PredJump(PredJump),
+    .M2nextPC(M2nextPC),
     .M2ObjAddr(M2ObjAddr),
     .M2Offset(M2Offset)
 );
@@ -163,20 +195,39 @@ TrapUnit TrapUnit (
     .M2StoreAccessFault(M2StoreAccessFault),
     .M2StoreAlignFault(M2StoreAlignFault),
     .M2StorePageFault(M2StorePageFault),
+    .MIE(MIE),
+    .MPIE(MPIE),
     .Ret(Ret),
+    .RetType(RetType),
+    .SIE(SIE),
+    .SPIE(SPIE),
+    .SPP(SPP),
     .MPP(MPP),
     .Privilege(Privilege),
     .M2BusW(M2BusW),
     .M2Instr(M2Instr),
     .M2PC(M2PC),
-    .M2PCCtrPC(M2PCCtrPC),
+    .M2PCCtrPC2(M2PCCtrPC2),
+    .medeleg(medeleg),
+    .mideleg(mideleg),
+    .mie(mie),
+    .mip(mip),
+    .WBnextPC(WBnextPC),
+    .NextMIE(NextMIE),
+    .NextMPIE(NextMPIE),
+    .NextSIE(NextSIE),
+    .NextSPIE(NextSPIE),
     .PrivilegeChange(PrivilegeChange),
     .Trap(Trap),
+    .TrapType(TrapType),
     .NextMPP(NextMPP),
     .NextPrivilege(NextPrivilege),
     .Nextmcause(Nextmcause),
     .Nextmepc(Nextmepc),
-    .Nextmtval(Nextmtval)
+    .Nextmtval(Nextmtval),
+    .Nextscause(Nextscause),
+    .Nextsepc(Nextsepc),
+    .Nextstval(Nextstval)
 );
 
 always @(posedge CLK or posedge RST) begin
@@ -192,6 +243,7 @@ always @(posedge CLK or posedge RST) begin
         WBCSRin <= 32'h0;
         WBCSRout <= 32'h0;
         WBimm <= 32'h0;
+        WBnextPC <= 32'h0;
         WBmem <= 32'h0;
         WBPCPlus4 <= 32'h4;
     end
@@ -222,6 +274,9 @@ always @(posedge CLK or posedge RST) begin
         WBCSRin <= M2CSRin;
         WBCSRout <= M2CSRout;
         WBimm <= M2imm;
+        WBnextPC <= !M2IsInstr ? WBnextPC :
+                    Ret ? (RetType ? {sepc[31:2], 2'h0} : {mepc[31:2], 2'h0}) :
+                    M2nextPC;
         WBmem <= M2mem;
         WBPCPlus4 <= M2PCPlus4;
     end

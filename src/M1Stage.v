@@ -32,6 +32,7 @@ module M1Stage (
     input M1PredTaken,
     input M1RegWr,
     input M1Ret,
+    input M1RetType,
     input [2:0] M1MemCtr,
     input [2:0] M1RegSrc,
     input [4:0] M1BranchCtr,
@@ -45,6 +46,7 @@ module M1Stage (
     input [31:0] M1imm,
     input [31:0] M1Instr,
     input [31:0] M1PC,
+    input [31:0] M1PCCtrPC1,
     input [31:0] M1PCPlus4,
     output reg M2ZF,
     output reg M2CF,
@@ -64,6 +66,7 @@ module M1Stage (
     output reg M2PredTaken,
     output reg M2RegWr,
     output reg M2Ret,
+    output reg M2RetType,
     output reg M2StoreAlignFault,
     output reg [2:0] M2MemCtr,
     output reg [2:0] M2RegSrc,
@@ -78,6 +81,7 @@ module M1Stage (
     output reg [31:0] M2imm,
     output reg [31:0] M2Instr,
     output reg [31:0] M2PC,
+    output reg [31:0] M2PCCtrPC1,
     output reg [31:0] M2PCPlus4
 );
 
@@ -139,6 +143,7 @@ always @(posedge CLK or posedge RST) begin
         M2PredTaken <= 1'h0;
         M2RegWr <= 1'h1;
         M2Ret <= 1'h0;
+        M2RetType <= 1'h0;
         M2StoreAlignFault <= 1'h0;
         M2MemCtr <= 3'h2;
         M2RegSrc <= 3'h0;
@@ -153,6 +158,7 @@ always @(posedge CLK or posedge RST) begin
         M2imm <= 32'h0;
         M2Instr <= 32'h13;
         M2PC <= 32'h0;
+        M2PCCtrPC1 <= 32'h4;
         M2PCPlus4 <= 32'h4;
     end
     else if (Flush) begin
@@ -174,6 +180,7 @@ always @(posedge CLK or posedge RST) begin
         M2PredTaken <= 1'h0;
         M2RegWr <= 1'h1;
         M2Ret <= 1'h0;
+        M2RetType <= 1'h0;
         M2StoreAlignFault <= 1'h0;
         M2MemCtr <= 3'h2;
         M2RegSrc <= 3'h0;
@@ -188,6 +195,7 @@ always @(posedge CLK or posedge RST) begin
         M2imm <= 32'h0;
         M2Instr <= 32'h13;
         M2PC <= 32'h0;
+        M2PCCtrPC1 <= 32'h4;
         M2PCPlus4 <= 32'h4;
     end
     else if (!Stall) begin
@@ -209,6 +217,7 @@ always @(posedge CLK or posedge RST) begin
         M2PredTaken <= M1PredTaken;
         M2RegWr <= M1RegWr;
         M2Ret <= M1Ret;
+        M2RetType <= M1RetType;
         M2StoreAlignFault <= M1StoreAlignFault;
         M2MemCtr <= M1MemCtr;
         M2RegSrc <= M1RegSrc;
@@ -223,6 +232,7 @@ always @(posedge CLK or posedge RST) begin
         M2imm <= M1imm;
         M2Instr <= M1Instr;
         M2PC <= M1PC;
+        M2PCCtrPC1 <= M1PCCtrPC1;
         M2PCPlus4 <= M1PCPlus4;
     end
 end

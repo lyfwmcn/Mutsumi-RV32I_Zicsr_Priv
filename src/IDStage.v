@@ -12,6 +12,7 @@ module IDStage (
     input [31:0] IDBusA,
     input [31:0] IDBusB,
     input [31:0] IDCSRout,
+    input [31:0] IDPCCtrPC1,
     output IDBusAused,
     output IDBusBused,
     output IDCSRWr,
@@ -43,6 +44,7 @@ module IDStage (
     output reg EXPredTaken,
     output reg EXRegWr,
     output reg EXRet,
+    output reg EXRetType,
     output reg [1:0] EXALUASrc,
     output reg [1:0] EXALUBSrc,
     output reg [1:0] EXCSRSrc,
@@ -58,6 +60,7 @@ module IDStage (
     output reg [31:0] EXimm,
     output reg [31:0] EXInstr,
     output reg [31:0] EXPC,
+    output reg [31:0] EXPCCtrPC1,
     output reg [31:0] EXPCPlus4
 );
 
@@ -68,6 +71,7 @@ wire IDEcall;
 wire IDInstrFault;
 wire IDRegWr;
 wire IDRet;
+wire IDRetType;
 wire [1:0] IDALUASrc;
 wire [1:0] IDALUBSrc;
 wire [1:0] IDCSRSrc;
@@ -91,6 +95,7 @@ always @(posedge CLK or posedge RST) begin
         EXPredTaken <= 1'h0;
         EXRegWr <= 1'h1;
         EXRet <= 1'h0;
+        EXRetType <= 1'h0;
         EXALUASrc <= 2'h0;
         EXALUBSrc <= 2'h1;
         EXCSRSrc <= 2'h0;
@@ -106,6 +111,7 @@ always @(posedge CLK or posedge RST) begin
         EXimm <= 32'h0;
         EXInstr <= 32'h13;
         EXPC <= 32'h0;
+        EXPCCtrPC1 <= 32'h4;
         EXPCPlus4 <= 32'h4;
     end
     else if (Flush) begin
@@ -122,6 +128,7 @@ always @(posedge CLK or posedge RST) begin
         EXPredTaken <= 1'h0;
         EXRegWr <= 1'h1;
         EXRet <= 1'h0;
+        EXRetType <= 1'h0;
         EXALUASrc <= 2'h0;
         EXALUBSrc <= 2'h1;
         EXCSRSrc <= 2'h0;
@@ -137,6 +144,7 @@ always @(posedge CLK or posedge RST) begin
         EXimm <= 32'h0;
         EXInstr <= 32'h13;
         EXPC <= 32'h0;
+        EXPCCtrPC1 <= 32'h4;
         EXPCPlus4 <= 32'h4;
     end
     else if (!Stall) begin
@@ -153,6 +161,7 @@ always @(posedge CLK or posedge RST) begin
         EXPredTaken <= IDPredTaken;
         EXRegWr <= IDRegWr;
         EXRet <= IDRet;
+        EXRetType <= IDRetType;
         EXALUASrc <= IDALUASrc;
         EXALUBSrc <= IDALUBSrc;
         EXCSRSrc <= IDCSRSrc;
@@ -168,6 +177,7 @@ always @(posedge CLK or posedge RST) begin
         EXimm <= IDimm;
         EXInstr <= IDInstr;
         EXPC <= IDPC;
+        EXPCCtrPC1 <= IDPCCtrPC1;
         EXPCPlus4 <= IDPCPlus4;
     end
 end
@@ -187,6 +197,7 @@ IDU IDU (
     .PredTaken(IDPredTaken),
     .RegWr(IDRegWr),
     .Ret(IDRet),
+    .RetType(IDRetType),
     .ALUASrc(IDALUASrc),
     .ALUBSrc(IDALUBSrc),
     .CSRSrc(IDCSRSrc),
