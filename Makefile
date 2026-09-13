@@ -13,7 +13,7 @@ BUILD_DIR    := build
 
 SIMBIN       := $(BUILD_DIR)/sim_test.bin
 SIMELF       := $(BUILD_DIR)/sim_test.elf
-SIMOBJ       := $(BUILD_DIR)/sim_start.o $(BUILD_DIR)/sim_main.o
+SIMOBJ       := $(BUILD_DIR)/sim_start.o $(BUILD_DIR)/sim_trap.o $(BUILD_DIR)/sim_main.o
 SIMLDSCRIPT  := tests/sim/linker.ld
 BIN2HEX      := tools/bin2hex.py
 
@@ -41,6 +41,7 @@ LPF          := syn/top.lpf
 
 TIMING       := $(BUILD_DIR)/timing.json
 TIMCONFIG    := $(BUILD_DIR)/timing.config
+TIMJSON      := $(BUILD_DIR)/timing_synth.json
 STAGETIMING  := tools/stage_timing.py
 
 
@@ -104,8 +105,11 @@ $(SYNOBJ): $(SYNASM) | $(BUILD_DIR)
 timing: $(TIMING) $(STAGETIMING) | $(BUILD_DIR)
 	$(PYTHON) $(STAGETIMING) $<
 
-$(TIMING): $(JSON) $(LPF) | $(BUILD_DIR)
-	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(JSON) --textcfg $(TIMCONFIG) --lpf $(LPF) --freq 25 --report $@ --detailed-timing-report
+$(TIMJSON): $(SYNSRCS) $(SYNMEM0) $(SYNMEM1) | $(BUILD_DIR)
+	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -noflatten -json $(TIMJSON)"
+
+$(TIMING): $(TIMJSON) $(LPF) | $(BUILD_DIR)
+	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(TIMJSON) --textcfg $(TIMCONFIG) --lpf $(LPF) --freq 25 --report $@ --detailed-timing-report
 
 
 clean:

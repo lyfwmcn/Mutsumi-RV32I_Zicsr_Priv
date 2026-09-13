@@ -66,6 +66,21 @@
 |   csrrwi   |               |     |  101   |      |
 |   csrrsi   |               |     |  110   |      |
 |   csrrci   |               |     |  111   |      |
+### FENCE 指令
+* opcode = 0001111
+* imm = {fm, pred, succ}
+
+|   instr    | fm  | pred | succ | Rs1 | funct3 |  Rd  |
+| :--------: | :-: | :--: | :--: | :-: | :----: | :--: |
+|   ecall    |  0  |      |      |  0  |  000   |  0   |
+* pred/succ: 
+
+| bit | function |
+| :-: | :------: |
+|  0  |    W     |
+|  1  |    R     |
+|  2  |    O     |
+|  3  |    I     |
 ## U 型指令
 * imm[31:12] + Rd + opcode
 

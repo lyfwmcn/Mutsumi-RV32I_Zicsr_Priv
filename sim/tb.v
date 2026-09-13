@@ -19,9 +19,18 @@ wire [31:0] Request_Addr_Instr;
 wire [31:0] Request_Addr_Data;
 wire [31:0] Request_Data_Data;
 
+reg External_Interrupt_Clear;
+reg External_Interrupt_Set;
+reg Timer_Interrupt_Clear;
+reg Timer_Interrupt_Set;
+
 CPU CPU (
     .CLK(CLK),
     .RST(RST),
+    .External_Interrupt_Clear(External_Interrupt_Clear),
+    .External_Interrupt_Set(External_Interrupt_Set),
+    .Timer_Interrupt_Clear(Timer_Interrupt_Clear),
+    .Timer_Interrupt_Set(Timer_Interrupt_Set),
     .Respond_Fault_Data(Respond_Fault_Data),
     .Respond_Fault_Instr(Respond_Fault_Instr),
     .Respond_Valid_Data(Respond_Valid_Data),
@@ -65,6 +74,14 @@ initial begin
 end
 
 initial begin
+    External_Interrupt_Clear <= 1'h0;
+    External_Interrupt_Set <= 1'h0;
+    Timer_Interrupt_Clear <= 1'h0;
+    Timer_Interrupt_Set <= 1'h0;
+    #500
+    Timer_Interrupt_Set <= 1'h1;
+    #10
+    Timer_Interrupt_Clear <= 1'h1;
     #20000
     // $display("188:     %h", SystemBus.mem[188]);
     // $display("189:     %h", SystemBus.mem[189]);

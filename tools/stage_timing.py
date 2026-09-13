@@ -12,7 +12,10 @@ Data used (see nextpnr common/kernel/report.cc):
   - fmax.<clock>.{achieved,constraint}
   - critical_paths[].path[] : segments {from.cell, to.cell, delay, type, net}
   - detailed_net_timings[]  : per net {driver, sources[], endpoints[{cell,port,delay[min,max]}]}
-    endpoint delay = accumulated arrival (ns) from the launch register to that sink.
+    `driver`/`endpoints[].cell` are cell instance names; `sources` is the Verilog
+    `src` location attribute (e.g. "src/IDStage.v:79..."), NOT a cell name
+    (see nextpnr net_sources()). endpoint delay = accumulated arrival (ns) from
+    the launch register to that sink.
 """
 
 import collections
@@ -61,12 +64,12 @@ def main():
         d = json.load(f)
 
     # ---- per (launch stage -> capture stage) worst arrival delay ----
+    # `sources` holds RTL src locations, not cells, so the drive/launch stage
+    # comes from the driving cell (`driver`).
     table = collections.defaultdict(float)
     edges = collections.Counter()
     for net in d.get("detailed_net_timings", []):
-        drv = net.get("driver", "")
-        srcs = net.get("sources") or []
-        lstage = stage_of(srcs[0]) if srcs else stage_of(drv)
+        lstage = stage_of(net.get("driver", ""))
         for ep in net.get("endpoints", []):
             cstage = stage_of(ep.get("cell", ""))
             delay = as_float(ep.get("delay"))
@@ -109,9 +112,10 @@ def main():
                                      for s in sorted(byst, key=lambda x: -byst[x])))
     lines.append("")
 
-    lines.append("## Per-stage delay table (launch register -> capture register)\n")
-    lines.append("Row = register that launches (its stage); column = register that captures. "
-                 "Value = worst accumulated arrival delay (ns) over all nets in `detailed_net_timings`.\n")
+    lines.append("## Per-stage delay table (driver stage -> sink stage)\n")
+    lines.append("Row = stage of the net's driving cell; column = stage of the sink cell. "
+                 "Value = worst accumulated arrival delay (ns) from the launch register over all "
+                 "nets in `detailed_net_timings`.\n")
     stages = [s for s in STAGE_ORDER if any(k[0] == s or k[1] == s for k in table)]
     lines.append("| launch \\ capture | " + " | ".join(stages) + " |")
     lines.append("|" + "---|" * (len(stages) + 1))

@@ -5,9 +5,22 @@
 module CSRFile (
     input CLK,
     input RST,
+
+    input External_Interrupt_Clear,
+    input External_Interrupt_Set,
+    input Timer_Interrupt_Clear,
+    input Timer_Interrupt_Set,
+
     input CSRWr,
+    input NextMIE,
+    input NextMPIE,
+    input NextSIE,
+    input NextSPIE,
+    input NextSPP,
     input Ret,
+    input RetType,
     input Trap,
+    input TrapType,
     input WBIsInstr,
     input [1:0] NextMPP,
     input [11:0] CSRRd,
@@ -16,11 +29,61 @@ module CSRFile (
     input [31:0] Nextmcause,
     input [31:0] Nextmepc,
     input [31:0] Nextmtval,
+    input [31:0] Nextstval,
+    input [31:0] Nextsepc,
+    input [31:0] Nextscause,
+    output CurMIE,
+    output CurMPIE,
+    output CurSIE,
+    output CurSPIE,
+    output CurSPP,
     output [1:0] CurMPP,
     output [31:0] CSRout,
+    output [31:0] Curmedeleg,
     output [31:0] Curmepc,
-    output [31:0] Curmtvec
+    output [31:0] Curmideleg,
+    output [31:0] Curmie,
+    output [31:0] Curmip,
+    output [31:0] Curmtvec,
+    output [31:0] Cursepc,
+    output [31:0] Curstvec
 );
+
+reg es0, es1, es2;
+reg ec0, ec1, ec2;
+reg ts0, ts1, ts2;
+reg tc0, tc1, tc2;
+
+always @(posedge CLK or posedge RST) begin
+    if (RST) begin
+        es0 <= 1'h0;
+        es1 <= 1'h0;
+        es2 <= 1'h0;
+        ec0 <= 1'h0;
+        ec1 <= 1'h0;
+        ec2 <= 1'h0;
+        ts0 <= 1'h0;
+        ts1 <= 1'h0;
+        ts2 <= 1'h0;
+        tc0 <= 1'h0;
+        tc1 <= 1'h0;
+        tc2 <= 1'h0;
+    end
+    else begin
+        es0 <= External_Interrupt_Set;
+        es1 <= es0;
+        es2 <= es1;
+        ec0 <= External_Interrupt_Clear;
+        ec1 <= ec0;
+        ec2 <= ec1;
+        ts0 <= Timer_Interrupt_Set;
+        ts1 <= ts0;
+        ts2 <= ts1;
+        tc0 <= Timer_Interrupt_Clear;
+        tc1 <= tc0;
+        tc2 <= tc1;
+    end
+end
 
 reg [31:0] stvec;
 reg [31:0] sscratch;
@@ -71,9 +134,20 @@ assign CSRout = CSRRs == 12'h100 ? {mstatus[31:23], 3'h0, mstatus[19:18], 1'h0, 
                 CSRRs == 12'hB82 ? minstreth :
                 CSRRs == 12'hF14 ? mhartid :
                 32'h0;
+assign CurMIE = mstatus[3];
+assign CurMPIE = mstatus[7];
 assign CurMPP = mstatus[12:11];
+assign CurSIE = mstatus[1];
+assign CurSPIE = mstatus[5];
+assign CurSPP = mstatus[8];
+assign Curmedeleg = medeleg;
 assign Curmepc = mepc;
+assign Curmideleg = mideleg;
+assign Curmie = mie;
+assign Curmip = mip;
 assign Curmtvec = mtvec;
+assign Cursepc = sepc;
+assign Curstvec = stvec;
 
 initial begin
     misa <= 32'h40000100;
@@ -108,6 +182,18 @@ always @(posedge CLK or posedge RST) begin
         if (WBIsInstr == 1'h1) begin
             {minstreth, minstret} <= {minstreth, minstret} + 64'h1;
         end
+        if (ec1 ^ ec2) begin
+            mip[11] <= 1'h0;
+        end
+        if (es1 ^ es2) begin
+            mip[11] <= 1'h1;
+        end
+        if (tc1 ^ tc2) begin
+            mip[7] <= 1'h0;
+        end
+        if (ts1 ^ ts2) begin
+            mip[7] <= 1'h1;
+        end
         if (CSRWr == 1'h1) begin
             case (CSRRd)
                 12'h100: {mstatus[19:18], mstatus[8], mstatus[5], mstatus[1]} <= {CSRin[19:18], CSRin[8], CSRin[5], CSRin[1]};
@@ -133,13 +219,34 @@ always @(posedge CLK or posedge RST) begin
             endcase
         end
         if (Ret == 1'h1) begin
-            mstatus[12:11] <= NextMPP;
+            if (RetType == 1'h0) begin
+                mstatus[3] <= NextMIE;
+                mstatus[7] <= NextMPIE;
+                mstatus[12:11] <= NextMPP;
+            end
+            else begin
+                mstatus[1] <= NextSIE;
+                mstatus[5] <= NextSPIE;
+                mstatus[8] <= NextSPP;
+            end
         end
         if (Trap == 1'h1) begin
-            mstatus[12:11] <= NextMPP;
-            mcause <= Nextmcause;
-            mepc <= Nextmepc;
-            mtval <= Nextmtval;
+            if (TrapType == 1'h0) begin
+                mstatus[3] <= NextMIE;
+                mstatus[7] <= NextMPIE;
+                mstatus[12:11] <= NextMPP;
+                mcause <= Nextmcause;
+                mepc <= Nextmepc;
+                mtval <= Nextmtval;
+            end
+            else begin
+                mstatus[1] <= NextSIE;
+                mstatus[5] <= NextSPIE;
+                mstatus[8] <= NextSPP;
+                scause <= Nextscause;
+                sepc <= Nextsepc;
+                stval <= Nextstval;
+            end
         end
     end
 end
