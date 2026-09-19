@@ -68,6 +68,8 @@ module ex1_stage (
     input      [31:0] ex1_pc,
     input      [31:0] ex1_pcplus4,
     input      [31:0] ex1_pcplusimm,
+    output reg        ex2_aluinausem1,
+    output reg        ex2_aluinbusem1,
     output reg        ex2_csr_wr,
     output reg        ex2_data_ren,
     output reg        ex2_data_wen,
@@ -103,7 +105,18 @@ module ex1_stage (
     output reg [31:0] ex2_reg_out_b
 );
 
+wire ex1_aluinausem1;
+wire ex1_aluinbusem1;
+wire ex1_rs1usem1;
+wire ex1_rs2usem1;
+wire [31:0] ex1_reg_out_a_true;
+wire [31:0] ex1_reg_out_b_true;
+wire [31:0] ex1_alu_in_a;
+wire [31:0] ex1_alu_in_b;
+
 initial begin
+    ex2_aluinausem1 = 1'h0;
+    ex2_aluinbusem1 = 1'h0;
     ex2_csr_wr = 1'h0;
     ex2_data_ren = 1'h0;
     ex2_data_wen = 1'h0;
@@ -141,6 +154,8 @@ end
 
 always @(posedge clk) begin
     if (flush) begin
+        ex2_aluinausem1 <= 1'h0;
+        ex2_aluinbusem1 <= 1'h0;
         ex2_csr_wr <= 1'h0;
         ex2_data_ren <= 1'h0;
         ex2_data_wen <= 1'h0;
@@ -176,6 +191,8 @@ always @(posedge clk) begin
         ex2_reg_out_b <= 32'h0;
     end
     else if (!stall) begin
+        ex2_aluinausem1 <= ex1_aluinausem1;
+        ex2_aluinbusem1 <= ex1_aluinbusem1;
         ex2_csr_wr <= ex1_csr_wr;
         ex2_data_ren <= ex1_data_ren;
         ex2_data_wen <= ex1_data_wen;
@@ -212,12 +229,6 @@ always @(posedge clk) begin
     end
 end
 
-wire ex1_rs1usem1;
-wire ex1_rs2usem1;
-wire [31:0] ex1_reg_out_a_true;
-wire [31:0] ex1_reg_out_b_true;
-wire [31:0] ex1_alu_in_a;
-wire [31:0] ex1_alu_in_b;
 assign ex1_alu_in_a = ex1_alu_src_a == 1'h0 ? ex1_reg_out_a_true : ex1_imm;
 assign ex1_alu_in_b = ex1_alu_src_b == 2'h0 ? ex1_reg_out_b_true :
                       ex1_alu_src_b == 2'h1 ? ex1_imm :
@@ -225,12 +236,14 @@ assign ex1_alu_in_b = ex1_alu_src_b == 2'h0 ? ex1_reg_out_b_true :
                       32'h0;
 
 reg_bypass reg_bypass (
+    .ex1_alu_src_a     (ex1_alu_src_a),
     .ex1_reg_out_a_used(ex1_reg_out_a_used),
     .ex1_reg_out_b_used(ex1_reg_out_b_used),
     .ex2_reg_wr        (ex2_reg_wr),
     .m1_reg_wr         (m1_reg_wr),
     .m2_reg_wr         (m2_reg_wr),
     .wb_reg_wr         (wb_reg_wr),
+    .ex1_alu_src_b     (ex1_alu_src_b),
     .ex2_reg_src       (ex2_reg_src),
     .m1_reg_src        (m1_reg_src),
     .m2_reg_src        (m2_reg_src),
@@ -248,6 +261,8 @@ reg_bypass reg_bypass (
     .reg_wait          (reg_wait),
     .ex1_rs1usem1      (ex1_rs1usem1),
     .ex1_rs2usem1      (ex1_rs2usem1),
+    .ex1_aluinausem1   (ex1_aluinausem1),
+    .ex1_aluinbusem1   (ex1_aluinbusem1),
     .ex1_reg_out_a_true(ex1_reg_out_a_true),
     .ex1_reg_out_b_true(ex1_reg_out_b_true)
 );

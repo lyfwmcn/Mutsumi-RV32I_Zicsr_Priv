@@ -76,6 +76,64 @@ module m1_stage (
     output reg [31:0] m2_raw_reg_in
 );
 
+wire m1_load_align_fault;
+wire m1_store_align_fault;
+wire m1_instr_align_fault;
+wire m1_actual_jump;
+wire [31:0] m1_jump_addr;
+wire [31:0] m1_nextpc;
+wire [31:0] m1_csr_in;
+
+assign m1_load_align_fault = m1_data_ren == 1'h1 && (((m1_mem_ctr == 3'h1 || m1_mem_ctr == 3'h5) && m1_alu_out[0] != 1'h0) || (m1_mem_ctr == 3'h2 && m1_alu_out[1:0] != 2'h0));
+assign m1_store_align_fault = m1_data_wen == 1'h1 && ((m1_mem_ctr == 3'h1 && m1_alu_out[0] != 1'h0) || (m1_mem_ctr == 3'h2 && m1_alu_out[1:0] != 2'h0));
+assign m1_instr_align_fault = m1_nextpc[1:0] != 2'h0;
+
+assign request_valid_data = !flush && !stall && ((m1_data_ren && !m1_load_align_fault) || (m1_data_wen && !m1_store_align_fault));
+assign request_write_data = m1_data_wen;
+wire [3:0] m_en0 [3:0];
+assign m_en0[0] = 4'h1;
+assign m_en0[1] = 4'h2;
+assign m_en0[2] = 4'h4;
+assign m_en0[3] = 4'h8;
+wire [3:0] m_en1 [1:0];
+assign m_en1[0] = 4'h3;
+assign m_en1[1] = 4'hc;
+wire [3:0] m_en2;
+assign m_en2 = 4'hf;
+assign request_en_data = m1_mem_ctr[1:0] == 2'h0 ? m_en0[m1_alu_out[1:0]] :
+                         m1_mem_ctr[1:0] == 2'h1 ? m_en1[m1_alu_out[1]] :
+                         m1_mem_ctr[1:0] == 2'h2 ? m_en2 :
+                         4'h0;
+assign request_addr_data = {m1_alu_out[31:2], 2'h0};
+wire [31:0] m_data0 [3:0];
+assign m_data0[0] = {24'h0, m1_reg_out_b[7:0]};
+assign m_data0[1] = {16'h0, m1_reg_out_b[7:0], 8'h0};
+assign m_data0[2] = {8'h0, m1_reg_out_b[7:0], 16'h0};
+assign m_data0[3] = {m1_reg_out_b[7:0], 24'h0};
+wire [31:0] m_data1 [1:0];
+assign m_data1[0] = {16'h0, m1_reg_out_b[15:0]};
+assign m_data1[1] = {m1_reg_out_b[15:0], 16'h0};
+wire [31:0] m_data2;
+assign m_data2 = m1_reg_out_b;
+assign request_data_data = !m1_data_wen ? 32'h0 :
+                           m1_mem_ctr == 3'h0 ? m_data0[m1_alu_out[1:0]] :
+                           m1_mem_ctr == 3'h1 ? m_data1[m1_alu_out[1]] :
+                           m1_mem_ctr == 3'h2 ? m_data2 :
+                           32'h0;
+
+wire [3:0] m1_fstcause;
+assign m1_fstcause = m1_instr_page_fault ? 4'hc :
+                     m1_instr_access_fault ? 4'h1 :
+                     m1_instr_illegal_fault ? 4'h2 :
+                     m1_ebreak ? 4'h3 :
+                     m1_ecall ? (privilege == 2'h0 ? 4'h8 : privilege == 2'h1 ? 4'h9 : 4'hb) :
+                     m1_instr_align_fault ? 4'h0 :
+                     m1_load_align_fault ? 4'h4 :
+                     m1_store_align_fault ? 4'h6 :
+                     4'ha;
+wire m1_fstcause_valid;
+assign m1_fstcause_valid = m1_instr_page_fault || m1_instr_access_fault || m1_instr_illegal_fault || m1_ebreak || m1_ecall || m1_instr_align_fault || m1_load_align_fault || m1_store_align_fault;
+
 initial begin
     m2_actual_jump = 1'h0;
     m2_csr_wr = 1'h0;
@@ -164,63 +222,6 @@ always @(posedge clk) begin
     end
 end
 
-wire m1_load_align_fault;
-wire m1_store_align_fault;
-wire m1_instr_align_fault;
-assign m1_load_align_fault = m1_data_ren == 1'h1 && (((m1_mem_ctr == 3'h1 || m1_mem_ctr == 3'h5) && m1_alu_out[0] != 1'h0) || (m1_mem_ctr == 3'h2 && m1_alu_out[1:0] != 2'h0));
-assign m1_store_align_fault = m1_data_wen == 1'h1 && ((m1_mem_ctr == 3'h1 && m1_alu_out[0] != 1'h0) || (m1_mem_ctr == 3'h2 && m1_alu_out[1:0] != 2'h0));
-assign m1_instr_align_fault = m1_nextpc[1:0] != 2'h0;
-
-assign request_valid_data = !flush && !stall && ((m1_data_ren && !m1_load_align_fault) || (m1_data_wen && !m1_store_align_fault));
-assign request_write_data = m1_data_wen;
-wire [3:0] m_en0 [3:0];
-assign m_en0[0] = 4'h1;
-assign m_en0[1] = 4'h2;
-assign m_en0[2] = 4'h4;
-assign m_en0[3] = 4'h8;
-wire [3:0] m_en1 [1:0];
-assign m_en1[0] = 4'h3;
-assign m_en1[1] = 4'hc;
-wire [3:0] m_en2;
-assign m_en2 = 4'hf;
-assign request_en_data = m1_mem_ctr[1:0] == 2'h0 ? m_en0[m1_alu_out[1:0]] :
-                         m1_mem_ctr[1:0] == 2'h1 ? m_en1[m1_alu_out[1]] :
-                         m1_mem_ctr[1:0] == 2'h2 ? m_en2 :
-                         4'h0;
-assign request_addr_data = {m1_alu_out[31:2], 2'h0};
-wire [31:0] m_data0 [3:0];
-assign m_data0[0] = {24'h0, m1_reg_out_b[7:0]};
-assign m_data0[1] = {16'h0, m1_reg_out_b[7:0], 8'h0};
-assign m_data0[2] = {8'h0, m1_reg_out_b[7:0], 16'h0};
-assign m_data0[3] = {m1_reg_out_b[7:0], 24'h0};
-wire [31:0] m_data1 [1:0];
-assign m_data1[0] = {16'h0, m1_reg_out_b[15:0]};
-assign m_data1[1] = {m1_reg_out_b[15:0], 16'h0};
-wire [31:0] m_data2;
-assign m_data2 = m1_reg_out_b;
-assign request_data_data = !m1_data_wen ? 32'h0 :
-                           m1_mem_ctr == 3'h0 ? m_data0[m1_alu_out[1:0]] :
-                           m1_mem_ctr == 3'h1 ? m_data1[m1_alu_out[1]] :
-                           m1_mem_ctr == 3'h2 ? m_data2 :
-                           32'h0;
-
-wire [3:0] m1_fstcause;
-assign m1_fstcause = m1_instr_page_fault ? 4'hc :
-                     m1_instr_access_fault ? 4'h1 :
-                     m1_instr_illegal_fault ? 4'h2 :
-                     m1_ebreak ? 4'h3 :
-                     m1_ecall ? (privilege == 2'h0 ? 4'h8 : privilege == 2'h1 ? 4'h9 : 4'hb) :
-                     m1_instr_align_fault ? 4'h0 :
-                     m1_load_align_fault ? 4'h4 :
-                     m1_store_align_fault ? 4'h6 :
-                     4'ha;
-wire m1_fstcause_valid;
-assign m1_fstcause_valid = m1_instr_page_fault || m1_instr_access_fault || m1_instr_illegal_fault || m1_ebreak || m1_ecall || m1_instr_align_fault || m1_load_align_fault || m1_store_align_fault;
-
-wire m1_actual_jump;
-wire [31:0] m1_jump_addr;
-wire [31:0] m1_nextpc;
-
 bu bu (
     .zf         (m1_zf),
     .cf         (m1_cf),
@@ -239,8 +240,6 @@ bu bu (
     .jump_addr  (m1_jump_addr),
     .nextpc     (m1_nextpc)
 );
-
-wire [31:0] m1_csr_in;
 
 csr_read csr_read (
     .csr_rd    (m1_csr_rd),

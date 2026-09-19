@@ -8,6 +8,8 @@ module ex2_stage (
     input             stall,
 
     // 流水线参数
+    input             ex2_aluinausem1,
+    input             ex2_aluinbusem1,
     input             ex2_csr_wr,
     input             ex2_data_ren,
     input             ex2_data_wen,
@@ -75,6 +77,19 @@ module ex2_stage (
     output reg [31:0] m1_raw_reg_in,
     output reg [31:0] m1_reg_out_b
 );
+
+wire ex2_zf;
+wire ex2_cf;
+wire ex2_sf;
+wire ex2_of;
+wire [31:0] ex2_alu_in_a_true;
+wire [31:0] ex2_alu_in_b_true;
+wire [31:0] ex2_raw_reg_in;
+wire [31:0] ex2_alu_out;
+
+wire [31:0] ex2_reg_out_a_true;
+wire [31:0] ex2_reg_out_b_true;
+wire [31:0] ex2_raw_csr_in;
 
 initial begin
     m1_zf = 1'h0;
@@ -185,28 +200,16 @@ always @(posedge clk) begin
     end
 end
 
-wire ex2_zf;
-wire ex2_cf;
-wire ex2_sf;
-wire ex2_of;
-wire [31:0] ex2_alu_in_a_true;
-wire [31:0] ex2_alu_in_b_true;
-wire [31:0] ex2_raw_reg_in;
-wire [31:0] ex2_alu_out;
-
-wire [31:0] ex2_reg_out_a_true;
-wire [31:0] ex2_reg_out_b_true;
 assign ex2_reg_out_a_true = ex2_rs1usem1 ? m1_raw_reg_in : ex2_reg_out_a;
 assign ex2_reg_out_b_true = ex2_rs2usem1 ? m1_raw_reg_in : ex2_reg_out_b;
 
-assign ex2_alu_in_a_true = ex2_rs1usem1 ? m1_raw_reg_in : ex2_alu_in_a;
-assign ex2_alu_in_b_true = ex2_rs2usem1 ? m1_raw_reg_in : ex2_alu_in_b;
+assign ex2_alu_in_a_true = ex2_aluinausem1 ? m1_raw_reg_in : ex2_alu_in_a;
+assign ex2_alu_in_b_true = ex2_aluinbusem1 ? m1_raw_reg_in : ex2_alu_in_b;
 assign ex2_raw_reg_in = ex2_reg_src[1:0] == 2'h0 ? ex2_alu_out :
                         ex2_reg_src[1:0] == 2'h1 ? ex2_pcplus4 :
                         ex2_reg_src[1:0] == 2'h2 ? ex2_imm :
                         ex2_csr_out;
 
-wire [31:0] ex2_raw_csr_in;
 assign ex2_raw_csr_in = ex2_csr_src == 2'h0 ? ex2_alu_out :
                         ex2_csr_src == 2'h1 ? ex2_reg_out_a_true :
                         ex2_csr_src == 2'h2 ? ex2_imm :

@@ -2,12 +2,14 @@
 
 // 7.1 ns
 module reg_bypass (
+    input         ex1_alu_src_a,
     input         ex1_reg_out_a_used,
     input         ex1_reg_out_b_used,
     input         ex2_reg_wr,
     input         m1_reg_wr,
     input         m2_reg_wr,
     input         wb_reg_wr,
+    input  [1:0]  ex1_alu_src_b,
     input  [2:0]  ex2_reg_src,
     input  [2:0]  m1_reg_src,
     input  [2:0]  m2_reg_src,
@@ -25,6 +27,8 @@ module reg_bypass (
     output        reg_wait,
     output        ex1_rs1usem1,
     output        ex1_rs2usem1,
+    output        ex1_aluinausem1,
+    output        ex1_aluinbusem1,
     output [31:0] ex1_reg_out_a_true,
     output [31:0] ex1_reg_out_b_true
 );
@@ -75,5 +79,8 @@ assign reg_wait = cond_a == 4'h3 || cond_a == 4'h5 || cond_a == 4'h7 ||
               cond_b == 4'h3 || cond_b == 4'h5 || cond_b == 4'h7;
 assign ex1_rs1usem1 = cond_a == 4'h6;
 assign ex1_rs2usem1 = cond_b == 4'h6;
+
+assign ex1_aluinausem1 = ex1_rs1usem1 && ex1_alu_src_a == 1'h0;
+assign ex1_aluinbusem1 = ex1_rs2usem1 && ex1_alu_src_b == 2'h0;
 
 endmodule

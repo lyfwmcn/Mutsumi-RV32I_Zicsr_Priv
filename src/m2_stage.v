@@ -87,6 +87,38 @@ assign actual_jump = m2_actual_jump;
 
 reg [31:0] wb_nextpc;
 
+wire [31:0] Data8S [3:0];
+assign Data8S[0] = {{24{respond_data_data[7]}}, respond_data_data[7:0]};
+assign Data8S[1] = {{24{respond_data_data[15]}}, respond_data_data[15:8]};
+assign Data8S[2] = {{24{respond_data_data[23]}}, respond_data_data[23:16]};
+assign Data8S[3] = {{24{respond_data_data[31]}}, respond_data_data[31:24]};
+
+wire [31:0] Data16S [1:0];
+assign Data16S[0] = {{16{respond_data_data[15]}}, respond_data_data[15:0]};
+assign Data16S[1] = {{16{respond_data_data[31]}}, respond_data_data[31:16]};
+
+wire [31:0] Data32;
+assign Data32 = respond_data_data;
+
+wire [31:0] Data8U [3:0];
+assign Data8U[0] = {24'h0, respond_data_data[7:0]};
+assign Data8U[1] = {24'h0, respond_data_data[15:8]};
+assign Data8U[2] = {24'h0, respond_data_data[23:16]};
+assign Data8U[3] = {24'h0, respond_data_data[31:24]};
+
+wire [31:0] Data16U [1:0];
+assign Data16U[0] = {16'h0, respond_data_data[15:0]};
+assign Data16U[1] = {16'h0, respond_data_data[31:16]};
+
+wire [31:0] m2_mem;
+assign m2_mem = !respond_valid_data || respond_fault_data ? 32'h0 :
+               m2_mem_ctr == 3'h0 ? Data8S[m2_alu_out[1:0]] :
+               m2_mem_ctr == 3'h1 ? Data16S[m2_alu_out[1]] :
+               m2_mem_ctr == 3'h2 ? Data32 :
+               m2_mem_ctr == 3'h4 ? Data8U[m2_alu_out[1:0]] :
+               m2_mem_ctr == 3'h5 ? Data16U[m2_alu_out[1]] :
+               32'h0;
+
 initial begin
     wb_csr_wr = 1'h0;
     wb_is_csr = 1'h0;
@@ -146,38 +178,6 @@ end
 assign ret = m2_ret;
 assign ret_type = m2_ret_type;
 assign mem_wait = (m2_data_ren || m2_data_wen) && !respond_valid_data;
-
-wire [31:0] Data8S [3:0];
-assign Data8S[0] = {{24{respond_data_data[7]}}, respond_data_data[7:0]};
-assign Data8S[1] = {{24{respond_data_data[15]}}, respond_data_data[15:8]};
-assign Data8S[2] = {{24{respond_data_data[23]}}, respond_data_data[23:16]};
-assign Data8S[3] = {{24{respond_data_data[31]}}, respond_data_data[31:24]};
-
-wire [31:0] Data16S [1:0];
-assign Data16S[0] = {{16{respond_data_data[15]}}, respond_data_data[15:0]};
-assign Data16S[1] = {{16{respond_data_data[31]}}, respond_data_data[31:16]};
-
-wire [31:0] Data32;
-assign Data32 = respond_data_data;
-
-wire [31:0] Data8U [3:0];
-assign Data8U[0] = {24'h0, respond_data_data[7:0]};
-assign Data8U[1] = {24'h0, respond_data_data[15:8]};
-assign Data8U[2] = {24'h0, respond_data_data[23:16]};
-assign Data8U[3] = {24'h0, respond_data_data[31:24]};
-
-wire [31:0] Data16U [1:0];
-assign Data16U[0] = {16'h0, respond_data_data[15:0]};
-assign Data16U[1] = {16'h0, respond_data_data[31:16]};
-
-wire [31:0] m2_mem;
-assign m2_mem = !respond_valid_data || respond_fault_data ? 32'h0 :
-               m2_mem_ctr == 3'h0 ? Data8S[m2_alu_out[1:0]] :
-               m2_mem_ctr == 3'h1 ? Data16S[m2_alu_out[1]] :
-               m2_mem_ctr == 3'h2 ? Data32 :
-               m2_mem_ctr == 3'h4 ? Data8U[m2_alu_out[1:0]] :
-               m2_mem_ctr == 3'h5 ? Data16U[m2_alu_out[1]] :
-               32'h0;
 
 wire m2_load_access_fault;
 wire m2_load_page_fault;

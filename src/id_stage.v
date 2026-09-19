@@ -53,6 +53,34 @@ module id_stage (
     output reg [31:0] ex1_pcplusimm
 );
 
+
+wire id_predtaken;
+wire id_reg_out_a_used;
+wire id_reg_out_b_used;
+wire id_csr_wr;
+wire id_data_ren;
+wire id_data_wen;
+wire id_ebreak;
+wire id_ecall;
+wire id_instr_illegal_fault;
+wire id_is_csr;
+wire id_reg_wr;
+wire id_ret;
+wire id_ret_type;
+wire id_alu_src_a;
+wire [1:0] id_alu_src_b;
+wire [1:0] id_csr_src;
+wire [2:0] id_mem_ctr;
+wire [2:0] id_reg_src;
+wire [4:0] id_branch_ctr;
+wire [4:0] id_rd;
+wire [4:0] id_rs1;
+wire [4:0] id_rs2;
+wire [5:0] id_alu_ctr;
+wire [11:0] id_csr_rd;
+wire [31:0] id_imm;
+wire [31:0] id_pcplusimm;
+
 initial begin
     ex1_alu_src_a = 1'h0;
     ex1_csr_wr = 1'h0;
@@ -161,32 +189,6 @@ end
 
 assign predtaken = id_predtaken && id_jump_addr[1:0] == 2'h0;
 
-wire id_predtaken;
-wire id_reg_out_a_used;
-wire id_reg_out_b_used;
-wire id_csr_wr;
-wire id_data_ren;
-wire id_data_wen;
-wire id_ebreak;
-wire id_ecall;
-wire id_instr_illegal_fault;
-wire id_is_csr;
-wire id_reg_wr;
-wire id_ret;
-wire id_ret_type;
-wire id_alu_src_a;
-wire [1:0] id_alu_src_b;
-wire [1:0] id_csr_src;
-wire [2:0] id_mem_ctr;
-wire [2:0] id_reg_src;
-wire [4:0] id_branch_ctr;
-wire [4:0] id_rd;
-wire [4:0] id_rs1;
-wire [4:0] id_rs2;
-wire [5:0] id_alu_ctr;
-wire [11:0] id_csr_rd;
-wire [31:0] id_imm;
-
 idu idu (
     .privilege          (privilege),
     .instr              (id_instr),
@@ -218,8 +220,6 @@ idu idu (
 );
 
 assign id_jump_addr = id_pcplusimm;
-
-wire [31:0] id_pcplusimm;
 // auipc, B, J 指令专用
 assign id_pcplusimm = id_pc +
                       (id_instr[4] ? {id_instr[31:12], 12'h0} : id_instr[2] ?

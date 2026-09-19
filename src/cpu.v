@@ -34,6 +34,208 @@ wire trap;
 wire trap_type;
 wire [1:0] privilege;
 
+wire        cur_MIE;
+wire        cur_MPIE;
+wire        cur_SIE;
+wire        cur_SPIE;
+wire        cur_SPP;
+wire [1:0]  cur_MPP;
+wire [31:0] cur_medeleg;
+wire [31:0] cur_mepc;
+wire [31:0] cur_mideleg;
+wire [31:0] cur_mie;
+wire [31:0] cur_mip;
+wire [31:0] cur_mtvec;
+wire [31:0] cur_sepc;
+wire [31:0] cur_stvec;
+
+wire        MIE;
+wire        MPIE;
+wire        SIE;
+wire        SPIE;
+wire        SPP;
+wire [1:0]  MPP;
+wire [31:0] medeleg;
+wire [31:0] mepc;
+wire [31:0] mideleg;
+wire [31:0] mie;
+wire [31:0] mip;
+wire [31:0] mtvec;
+wire [31:0] sepc;
+wire [31:0] stvec;
+
+wire        id_instr_access_fault;
+wire        id_instr_page_fault;
+wire        id_is_instr;
+wire [31:0] id_instr;
+wire [31:0] id_pc;
+wire [31:0] id_pcplus4;
+
+wire [31:0] id_jump_addr; //* 有延迟
+
+wire        ex1_alu_src_a;
+wire        ex1_csr_wr;
+wire        ex1_data_ren;
+wire        ex1_data_wen;
+wire        ex1_ebreak;
+wire        ex1_ecall;
+wire        ex1_instr_access_fault;
+wire        ex1_instr_illegal_fault;
+wire        ex1_instr_page_fault;
+wire        ex1_is_csr;
+wire        ex1_is_instr;
+wire        ex1_predtaken;
+wire        ex1_reg_out_a_used;
+wire        ex1_reg_out_b_used;
+wire        ex1_reg_wr;
+wire        ex1_ret;
+wire        ex1_ret_type;
+wire [1:0]  ex1_alu_src_b;
+wire [1:0]  ex1_csr_src;
+wire [2:0]  ex1_mem_ctr;
+wire [2:0]  ex1_reg_src;
+wire [4:0]  ex1_branch_ctr;
+wire [4:0]  ex1_rd;
+wire [4:0]  ex1_rs1;
+wire [4:0]  ex1_rs2;
+wire [5:0]  ex1_alu_ctr;
+wire [11:0] ex1_csr_rd;
+wire [31:0] ex1_csr_out;   // 有延迟
+wire [31:0] ex1_imm;
+wire [31:0] ex1_instr;
+wire [31:0] ex1_pc;
+wire [31:0] ex1_pcplus4;
+wire [31:0] ex1_pcplusimm;
+wire [31:0] ex1_reg_out_a; // 有延迟
+wire [31:0] ex1_reg_out_b; // 有延迟
+
+wire        ex2_aluinausem1;
+wire        ex2_aluinbusem1;
+wire        ex2_csr_wr;
+wire        ex2_data_ren;
+wire        ex2_data_wen;
+wire        ex2_ebreak;
+wire        ex2_ecall;
+wire        ex2_instr_access_fault;
+wire        ex2_instr_illegal_fault;
+wire        ex2_instr_page_fault;
+wire        ex2_is_csr;
+wire        ex2_is_instr;
+wire        ex2_predtaken;
+wire        ex2_reg_wr;
+wire        ex2_ret;
+wire        ex2_ret_type;
+wire        ex2_rs1usem1;
+wire        ex2_rs2usem1;
+wire [1:0]  ex2_csr_src;
+wire [2:0]  ex2_mem_ctr;
+wire [2:0]  ex2_reg_src;
+wire [4:0]  ex2_branch_ctr;
+wire [4:0]  ex2_rd;
+wire [5:0]  ex2_alu_ctr;
+wire [11:0] ex2_csr_rd;
+wire [31:0] ex2_alu_in_a;
+wire [31:0] ex2_alu_in_b;
+wire [31:0] ex2_csr_out;
+wire [31:0] ex2_imm;
+wire [31:0] ex2_instr;
+wire [31:0] ex2_pc;
+wire [31:0] ex2_pcplus4;
+wire [31:0] ex2_pcplusimm;
+wire [31:0] ex2_reg_out_a;
+wire [31:0] ex2_reg_out_b;
+
+wire        m1_zf;
+wire        m1_cf;
+wire        m1_sf;
+wire        m1_of;
+wire        m1_csr_wr;
+wire        m1_data_ren;
+wire        m1_data_wen;
+wire        m1_ebreak;
+wire        m1_ecall;
+wire        m1_instr_access_fault;
+wire        m1_instr_illegal_fault;
+wire        m1_instr_page_fault;
+wire        m1_is_csr;
+wire        m1_is_instr;
+wire        m1_predtaken;
+wire        m1_reg_wr;
+wire        m1_ret;
+wire        m1_ret_type;
+wire [2:0]  m1_mem_ctr;
+wire [2:0]  m1_reg_src;
+wire [4:0]  m1_branch_ctr;
+wire [4:0]  m1_rd;
+wire [11:0] m1_csr_rd;
+wire [31:0] m1_alu_out;
+wire [31:0] m1_csr_out;
+wire [31:0] m1_imm;
+wire [31:0] m1_instr;
+wire [31:0] m1_pc;
+wire [31:0] m1_pcplus4;
+wire [31:0] m1_pcplusimm;
+wire [31:0] m1_raw_csr_in;
+wire [31:0] m1_raw_reg_in;
+wire [31:0] m1_reg_out_b;
+
+wire        m2_actual_jump;
+wire        m2_csr_wr;
+wire        m2_data_ren;
+wire        m2_data_wen;
+wire        m2_is_csr;
+wire        m2_is_instr;
+wire        m2_reg_wr;
+wire        m2_ret;
+wire        m2_ret_type;
+wire        m2_fstcause_valid;
+wire [2:0]  m2_mem_ctr;
+wire [2:0]  m2_reg_src;
+wire [3:0]  m2_fstcause;
+wire [4:0]  m2_rd;
+wire [11:0] m2_csr_rd;
+wire [31:0] m2_alu_out;
+wire [31:0] m2_csr_in;
+wire [31:0] m2_csr_out;
+wire [31:0] m2_imm;
+wire [31:0] m2_instr;
+wire [31:0] m2_jump_addr;
+wire [31:0] m2_nextpc;
+wire [31:0] m2_pc;
+wire [31:0] m2_pcplus4;
+wire [31:0] m2_pcplusimm;
+wire [31:0] m2_raw_reg_in;
+
+wire        next_MIE;
+wire        next_MPIE;
+wire        next_SIE;
+wire        next_SPIE;
+wire        next_SPP;
+wire [1:0]  next_MPP;
+wire [1:0]  nextprivilege;
+wire [31:0] next_mcause;
+wire [31:0] next_mepc;
+wire [31:0] next_mtval;
+wire [31:0] next_scause;
+wire [31:0] next_sepc;
+wire [31:0] next_stval;
+wire        wb_csr_wr;
+wire        wb_is_csr;
+wire        wb_is_instr;
+wire        wb_reg_wr;
+wire [2:0]  wb_reg_src;
+wire [4:0]  wb_rd;
+wire [11:0] wb_csr_rd;
+wire [31:0] wb_alu_out;
+wire [31:0] wb_csr_in;
+wire [31:0] wb_csr_out;
+wire [31:0] wb_imm;
+wire [31:0] wb_mem;
+wire [31:0] wb_pcplus4;
+wire [31:0] wb_pcplusimm;
+
+wire [31:0] wb_reg_in;
+
 privilege_mode privilege_mode (
     .clk             (clk),
     .ret             (ret),
@@ -88,21 +290,6 @@ csr_file csr_file (
     .cur_stvec               (cur_stvec)
 );
 
-wire        cur_MIE;
-wire        cur_MPIE;
-wire        cur_SIE;
-wire        cur_SPIE;
-wire        cur_SPP;
-wire [1:0]  cur_MPP;
-wire [31:0] cur_medeleg;
-wire [31:0] cur_mepc;
-wire [31:0] cur_mideleg;
-wire [31:0] cur_mie;
-wire [31:0] cur_mip;
-wire [31:0] cur_mtvec;
-wire [31:0] cur_sepc;
-wire [31:0] cur_stvec;
-
 trap_csr_bypass trap_csr_bypass (
     .clk        (clk),
     .flush      (trap | ret | actual_jump),
@@ -142,21 +329,6 @@ trap_csr_bypass trap_csr_bypass (
     .sepc       (sepc),
     .stvec      (stvec)
 );
-
-wire        MIE;
-wire        MPIE;
-wire        SIE;
-wire        SPIE;
-wire        SPP;
-wire [1:0]  MPP;
-wire [31:0] medeleg;
-wire [31:0] mepc;
-wire [31:0] mideleg;
-wire [31:0] mie;
-wire [31:0] mip;
-wire [31:0] mtvec;
-wire [31:0] sepc;
-wire [31:0] stvec;
 
 reg_file reg_file (
     .clk      (clk),
@@ -200,15 +372,6 @@ if_stage if_stage (
     .id_pc                (id_pc),
     .id_pcplus4           (id_pcplus4)
 );
-
-wire        id_instr_access_fault;
-wire        id_instr_page_fault;
-wire        id_is_instr;
-wire [31:0] id_instr;
-wire [31:0] id_pc;
-wire [31:0] id_pcplus4;
-
-wire [31:0] id_jump_addr; //* 有延迟
 
 id_stage id_stage (
     .clk                    (clk),
@@ -258,42 +421,6 @@ id_stage id_stage (
     .ex1_pcplus4            (ex1_pcplus4),
     .ex1_pcplusimm          (ex1_pcplusimm)
 );
-
-wire        ex1_alu_src_a;
-wire        ex1_csr_wr;
-wire        ex1_data_ren;
-wire        ex1_data_wen;
-wire        ex1_ebreak;
-wire        ex1_ecall;
-wire        ex1_instr_access_fault;
-wire        ex1_instr_illegal_fault;
-wire        ex1_instr_page_fault;
-wire        ex1_is_csr;
-wire        ex1_is_instr;
-wire        ex1_predtaken;
-wire        ex1_reg_out_a_used;
-wire        ex1_reg_out_b_used;
-wire        ex1_reg_wr;
-wire        ex1_ret;
-wire        ex1_ret_type;
-wire [1:0]  ex1_alu_src_b;
-wire [1:0]  ex1_csr_src;
-wire [2:0]  ex1_mem_ctr;
-wire [2:0]  ex1_reg_src;
-wire [4:0]  ex1_branch_ctr;
-wire [4:0]  ex1_rd;
-wire [4:0]  ex1_rs1;
-wire [4:0]  ex1_rs2;
-wire [5:0]  ex1_alu_ctr;
-wire [11:0] ex1_csr_rd;
-wire [31:0] ex1_csr_out;   // 有延迟
-wire [31:0] ex1_imm;
-wire [31:0] ex1_instr;
-wire [31:0] ex1_pc;
-wire [31:0] ex1_pcplus4;
-wire [31:0] ex1_pcplusimm;
-wire [31:0] ex1_reg_out_a; // 有延迟
-wire [31:0] ex1_reg_out_b; // 有延迟
 
 ex1_stage ex1_stage (
     .clk                    (clk),
@@ -358,6 +485,8 @@ ex1_stage ex1_stage (
     .ex1_pc                 (ex1_pc),
     .ex1_pcplus4            (ex1_pcplus4),
     .ex1_pcplusimm          (ex1_pcplusimm),
+    .ex2_aluinausem1        (ex2_aluinausem1),
+    .ex2_aluinbusem1        (ex2_aluinbusem1),
     .ex2_csr_wr             (ex2_csr_wr),
     .ex2_data_ren           (ex2_data_ren),
     .ex2_data_wen           (ex2_data_wen),
@@ -393,45 +522,13 @@ ex1_stage ex1_stage (
     .ex2_reg_out_b          (ex2_reg_out_b)
 );
 
-wire        ex2_csr_wr;
-wire        ex2_data_ren;
-wire        ex2_data_wen;
-wire        ex2_ebreak;
-wire        ex2_ecall;
-wire        ex2_instr_access_fault;
-wire        ex2_instr_illegal_fault;
-wire        ex2_instr_page_fault;
-wire        ex2_is_csr;
-wire        ex2_is_instr;
-wire        ex2_predtaken;
-wire        ex2_reg_wr;
-wire        ex2_ret;
-wire        ex2_ret_type;
-wire        ex2_rs1usem1;
-wire        ex2_rs2usem1;
-wire [1:0]  ex2_csr_src;
-wire [2:0]  ex2_mem_ctr;
-wire [2:0]  ex2_reg_src;
-wire [4:0]  ex2_branch_ctr;
-wire [4:0]  ex2_rd;
-wire [5:0]  ex2_alu_ctr;
-wire [11:0] ex2_csr_rd;
-wire [31:0] ex2_alu_in_a;
-wire [31:0] ex2_alu_in_b;
-wire [31:0] ex2_csr_out;
-wire [31:0] ex2_imm;
-wire [31:0] ex2_instr;
-wire [31:0] ex2_pc;
-wire [31:0] ex2_pcplus4;
-wire [31:0] ex2_pcplusimm;
-wire [31:0] ex2_reg_out_a;
-wire [31:0] ex2_reg_out_b;
-
 ex2_stage ex2_stage (
     .clk                    (clk),
     .flush                  (trap | ret | actual_jump),
     .stall                  (mem_wait),
 
+    .ex2_aluinausem1        (ex2_aluinausem1),
+    .ex2_aluinbusem1        (ex2_aluinbusem1),
     .ex2_csr_wr             (ex2_csr_wr),
     .ex2_data_ren           (ex2_data_ren),
     .ex2_data_wen           (ex2_data_wen),
@@ -499,40 +596,6 @@ ex2_stage ex2_stage (
     .m1_raw_reg_in          (m1_raw_reg_in),
     .m1_reg_out_b           (m1_reg_out_b)
 );
-
-wire        m1_zf;
-wire        m1_cf;
-wire        m1_sf;
-wire        m1_of;
-wire        m1_csr_wr;
-wire        m1_data_ren;
-wire        m1_data_wen;
-wire        m1_ebreak;
-wire        m1_ecall;
-wire        m1_instr_access_fault;
-wire        m1_instr_illegal_fault;
-wire        m1_instr_page_fault;
-wire        m1_is_csr;
-wire        m1_is_instr;
-wire        m1_predtaken;
-wire        m1_reg_wr;
-wire        m1_ret;
-wire        m1_ret_type;
-wire [2:0]  m1_mem_ctr;
-wire [2:0]  m1_reg_src;
-wire [4:0]  m1_branch_ctr;
-wire [4:0]  m1_rd;
-wire [11:0] m1_csr_rd;
-wire [31:0] m1_alu_out;
-wire [31:0] m1_csr_out;
-wire [31:0] m1_imm;
-wire [31:0] m1_instr;
-wire [31:0] m1_pc;
-wire [31:0] m1_pcplus4;
-wire [31:0] m1_pcplusimm;
-wire [31:0] m1_raw_csr_in;
-wire [31:0] m1_raw_reg_in;
-wire [31:0] m1_reg_out_b;
 
 m1_stage m1_stage (
     .clk                   (clk),
@@ -607,33 +670,6 @@ m1_stage m1_stage (
     .m2_pcplusimm          (m2_pcplusimm),
     .m2_raw_reg_in         (m2_raw_reg_in)
 );
-
-wire        m2_actual_jump;
-wire        m2_csr_wr;
-wire        m2_data_ren;
-wire        m2_data_wen;
-wire        m2_is_csr;
-wire        m2_is_instr;
-wire        m2_reg_wr;
-wire        m2_ret;
-wire        m2_ret_type;
-wire        m2_fstcause_valid;
-wire [2:0]  m2_mem_ctr;
-wire [2:0]  m2_reg_src;
-wire [3:0]  m2_fstcause;
-wire [4:0]  m2_rd;
-wire [11:0] m2_csr_rd;
-wire [31:0] m2_alu_out;
-wire [31:0] m2_csr_in;
-wire [31:0] m2_csr_out;
-wire [31:0] m2_imm;
-wire [31:0] m2_instr;
-wire [31:0] m2_jump_addr;
-wire [31:0] m2_nextpc;
-wire [31:0] m2_pc;
-wire [31:0] m2_pcplus4;
-wire [31:0] m2_pcplusimm;
-wire [31:0] m2_raw_reg_in;
 
 m2_stage m2_stage (
     .clk                   (clk),
@@ -712,34 +748,6 @@ m2_stage m2_stage (
     .wb_pcplusimm          (wb_pcplusimm)
 );
 
-wire        next_MIE;
-wire        next_MPIE;
-wire        next_SIE;
-wire        next_SPIE;
-wire        next_SPP;
-wire [1:0]  next_MPP;
-wire [1:0]  nextprivilege;
-wire [31:0] next_mcause;
-wire [31:0] next_mepc;
-wire [31:0] next_mtval;
-wire [31:0] next_scause;
-wire [31:0] next_sepc;
-wire [31:0] next_stval;
-wire        wb_csr_wr;
-wire        wb_is_csr;
-wire        wb_is_instr;
-wire        wb_reg_wr;
-wire [2:0]  wb_reg_src;
-wire [4:0]  wb_rd;
-wire [11:0] wb_csr_rd;
-wire [31:0] wb_alu_out;
-wire [31:0] wb_csr_in;
-wire [31:0] wb_csr_out;
-wire [31:0] wb_imm;
-wire [31:0] wb_mem;
-wire [31:0] wb_pcplus4;
-wire [31:0] wb_pcplusimm;
-
 wb_stage wb_stage (
     .wb_reg_in(wb_reg_in),
 
@@ -751,7 +759,5 @@ wb_stage wb_stage (
     .wb_pcplus4(wb_pcplus4),
     .wb_pcplusimm(wb_pcplusimm)
 );
-
-wire [31:0] wb_reg_in;
 
 endmodule
