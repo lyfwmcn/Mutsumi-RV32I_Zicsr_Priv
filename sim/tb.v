@@ -2,86 +2,83 @@
 
 module tb;
 
-reg CLK;
-reg RST;
+reg clk;
 
-wire Respond_Fault_Data;
-wire Respond_Fault_Instr;
-wire Respond_Valid_Data;
-wire Respond_Valid_Instr;
-wire [31:0] Respond_Data_Data;
-wire [31:0] Respond_Data_Instr;
-wire Request_Valid_Instr;
-wire Request_Valid_Data;
-wire Request_Write_Data;
-wire [3:0] Request_EN_Data;
-wire [31:0] Request_Addr_Instr;
-wire [31:0] Request_Addr_Data;
-wire [31:0] Request_Data_Data;
+wire        request_valid_data;
+wire        request_valid_instr;
+wire        request_write_data;
+wire [3:0]  request_en_data;
+wire [31:0] request_addr_data;
+wire [31:0] request_addr_instr;
+wire [31:0] request_data_data;
 
-reg External_Interrupt_Clear;
-reg External_Interrupt_Set;
-reg Timer_Interrupt_Clear;
-reg Timer_Interrupt_Set;
+wire        respond_fault_data;
+wire        respond_fault_instr;
+wire        respond_valid_data;
+wire        respond_valid_instr;
+wire [31:0] respond_data_data;
+wire [31:0] respond_data_instr;
 
-CPU CPU (
-    .CLK(CLK),
-    .RST(RST),
-    .External_Interrupt_Clear(External_Interrupt_Clear),
-    .External_Interrupt_Set(External_Interrupt_Set),
-    .Timer_Interrupt_Clear(Timer_Interrupt_Clear),
-    .Timer_Interrupt_Set(Timer_Interrupt_Set),
-    .Respond_Fault_Data(Respond_Fault_Data),
-    .Respond_Fault_Instr(Respond_Fault_Instr),
-    .Respond_Valid_Data(Respond_Valid_Data),
-    .Respond_Valid_Instr(Respond_Valid_Instr),
-    .Respond_Data_Data(Respond_Data_Data),
-    .Respond_Data_Instr(Respond_Data_Instr),
-    .Request_Valid_Data(Request_Valid_Data),
-    .Request_Valid_Instr(Request_Valid_Instr),
-    .Request_Write_Data(Request_Write_Data),
-    .Request_EN_Data(Request_EN_Data),
-    .Request_Addr_Data(Request_Addr_Data),
-    .Request_Addr_Instr(Request_Addr_Instr),
-    .Request_Data_Data(Request_Data_Data)
+reg external_interrupt_clear;
+reg external_interrupt_set;
+reg timer_interrupt_clear;
+reg timer_interrupt_set;
+
+cpu cpu (
+    .clk                     (clk),
+    .external_interrupt_clear(external_interrupt_clear),
+    .external_interrupt_set  (external_interrupt_set),
+    .timer_interrupt_clear   (timer_interrupt_clear),
+    .timer_interrupt_set     (timer_interrupt_set),
+
+    .respond_fault_data      (respond_fault_data),
+    .respond_fault_instr     (respond_fault_instr),
+    .respond_valid_data      (respond_valid_data),
+    .respond_valid_instr     (respond_valid_instr),
+    .respond_data_data       (respond_data_data),
+    .respond_data_instr      (respond_data_instr),
+
+    .request_valid_data      (request_valid_data),
+    .request_valid_instr     (request_valid_instr),
+    .request_write_data      (request_write_data),
+    .request_en_data         (request_en_data),
+    .request_addr_data       (request_addr_data),
+    .request_addr_instr      (request_addr_instr),
+    .request_data_data       (request_data_data)
 );
 
-SystemBus SystemBus (
-    .CLK(CLK),
-    .RST(RST),
-    .Request_Valid_Data(Request_Valid_Data),
-    .Request_Valid_Instr(Request_Valid_Instr),
-    .Request_Write_Data(Request_Write_Data),
-    .Request_EN_Data(Request_EN_Data),
-    .Request_Addr_Data(Request_Addr_Data),
-    .Request_Addr_Instr(Request_Addr_Instr),
-    .Request_Data_Data(Request_Data_Data),
-    .Respond_Fault_Data(Respond_Fault_Data),
-    .Respond_Fault_Instr(Respond_Fault_Instr),
-    .Respond_Valid_Data(Respond_Valid_Data),
-    .Respond_Valid_Instr(Respond_Valid_Instr),
-    .Respond_Data_Data(Respond_Data_Data),
-    .Respond_Data_Instr(Respond_Data_Instr)
+system_bus system_bus (
+    .clk                (clk),
+    .request_valid_data (request_valid_data),
+    .request_valid_instr(request_valid_instr),
+    .request_write_data (request_write_data),
+    .request_en_data    (request_en_data),
+    .request_addr_data  (request_addr_data),
+    .request_addr_instr (request_addr_instr),
+    .request_data_data  (request_data_data),
+
+    .respond_fault_data (respond_fault_data),
+    .respond_fault_instr(respond_fault_instr),
+    .respond_valid_data (respond_valid_data),
+    .respond_valid_instr(respond_valid_instr),
+    .respond_data_data  (respond_data_data),
+    .respond_data_instr (respond_data_instr)
 );
 
 initial begin
-    RST = 1;
-    #5
-    RST = 0;
-    #5
-    CLK = 0;
-    forever #5 CLK = ~CLK;
+    clk = 0;
+    forever #5 clk = ~clk;
 end
 
 initial begin
-    External_Interrupt_Clear <= 1'h0;
-    External_Interrupt_Set <= 1'h0;
-    Timer_Interrupt_Clear <= 1'h0;
-    Timer_Interrupt_Set <= 1'h0;
+    external_interrupt_clear <= 1'h0;
+    external_interrupt_set <= 1'h0;
+    timer_interrupt_clear <= 1'h0;
+    timer_interrupt_set <= 1'h0;
     #500
-    Timer_Interrupt_Set <= 1'h1;
+    timer_interrupt_set <= 1'h1;
     #10
-    Timer_Interrupt_Clear <= 1'h1;
+    timer_interrupt_clear <= 1'h1;
     #20000
     // $display("188:     %h", SystemBus.mem[188]);
     // $display("189:     %h", SystemBus.mem[189]);
@@ -95,8 +92,8 @@ initial begin
     // $display("x2/sp:     %h", CPU.RegFile.regs[2]);
     // $display("x3/gp:     %h", CPU.RegFile.regs[3]);
     // $display("x4/tp:     %h", CPU.RegFile.regs[4]);
-    $display("x5/t0:     %h", CPU.RegFile.regs[5]);
-    $display("x6/t1:     %h", CPU.RegFile.regs[6]);
+    $display("x5/t0:     %h", cpu.reg_file.regs[5]);
+    $display("x6/t1:     %h", cpu.reg_file.regs[6]);
     // $display("x7/t2:     %h", CPU.RegFile.regs[7]);
     // $display("x8/s0/fp:  %h", CPU.RegFile.regs[8]);
     // $display("x9/s1:     %h", CPU.RegFile.regs[9]);

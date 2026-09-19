@@ -106,7 +106,7 @@ timing: $(TIMING) $(STAGETIMING) | $(BUILD_DIR)
 	$(PYTHON) $(STAGETIMING) $<
 
 $(TIMJSON): $(SYNSRCS) $(SYNMEM0) $(SYNMEM1) | $(BUILD_DIR)
-	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -noflatten -json $(TIMJSON)"
+	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $(TIMJSON)"
 
 $(TIMING): $(TIMJSON) $(LPF) | $(BUILD_DIR)
 	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(TIMJSON) --textcfg $(TIMCONFIG) --lpf $(LPF) --freq 25 --report $@ --detailed-timing-report
