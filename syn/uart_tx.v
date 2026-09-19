@@ -14,9 +14,9 @@ module uart_tx #(
 );
 
 localparam IDLE   = 2'd0;
-localparam ACTIVE = 1'd1;
+localparam ACTIVE = 2'd1;
 
-reg [8:0] cnt;
+reg [31:0] cnt;
 reg [1:0] state;
 reg [3:0] bits;     // 已发出的数据位数 0..8，之后为停止位阶段
 reg [7:0] sh;
@@ -27,7 +27,7 @@ initial begin
     busy  = 1'b0;
     bits  = 4'd0;
     sh    = 8'h0;
-    cnt   = 9'd0;
+    cnt   = 32'd0;
 end
 
 always @(posedge clk) begin
@@ -40,12 +40,12 @@ always @(posedge clk) begin
                 busy  <= 1'b1;
                 bits  <= 4'd0;
                 sh    <= data;
-                cnt   <= 9'd0;
+                cnt   <= 32'd0;
                 tx    <= 1'b0;      // 起始位：持续到第一个 cnt==DIV-1 边界
             end
         end
         ACTIVE: begin
-            cnt <= (cnt == DIV - 1) ? 9'd0 : cnt + 9'd1;
+            cnt <= (cnt == DIV - 1) ? 32'd0 : cnt + 32'd1;
             if (cnt == DIV - 1) begin
                 if (bits < 8) begin
                     tx  <= sh[0];
@@ -62,6 +62,14 @@ always @(posedge clk) begin
                     tx    <= 1'b1;
                 end
             end
+        end
+        default:begin
+            state = IDLE;
+            tx    = 1'b1;
+            busy  = 1'b0;
+            bits  = 4'd0;
+            sh    = 8'h0;
+            cnt   = 32'd0;
         end
     endcase
 end
