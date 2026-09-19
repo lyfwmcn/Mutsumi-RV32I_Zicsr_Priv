@@ -76,7 +76,7 @@ assign ex1_reg_out_b_trues[8] = 32'h0;
 assign ex1_reg_out_b_true = ex1_reg_out_b_trues[cond_b];
 
 assign reg_wait = cond_a == 4'h3 || cond_a == 4'h5 || cond_a == 4'h7 ||
-              cond_b == 4'h3 || cond_b == 4'h5 || cond_b == 4'h7;
+                  cond_b == 4'h3 || cond_b == 4'h5 || cond_b == 4'h7;
 assign ex1_rs1usem1 = cond_a == 4'h6;
 assign ex1_rs2usem1 = cond_b == 4'h6;
 

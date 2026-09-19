@@ -143,8 +143,8 @@ always @(posedge clk) begin
         m1_instr_page_fault <= 1'h0;
         m1_is_csr <= 1'h0;
         m1_is_instr <= 1'h0;
-        m1_predtaken <= 1'h1;
-        m1_reg_wr <= 1'h0;
+        m1_predtaken <= 1'h0;
+        m1_reg_wr <= 1'h1;
         m1_ret <= 1'h0;
         m1_ret_type <= 1'h0;
         m1_mem_ctr <= 3'h0;
@@ -205,10 +205,13 @@ assign ex2_reg_out_b_true = ex2_rs2usem1 ? m1_raw_reg_in : ex2_reg_out_b;
 
 assign ex2_alu_in_a_true = ex2_aluinausem1 ? m1_raw_reg_in : ex2_alu_in_a;
 assign ex2_alu_in_b_true = ex2_aluinbusem1 ? m1_raw_reg_in : ex2_alu_in_b;
-assign ex2_raw_reg_in = ex2_reg_src[1:0] == 2'h0 ? ex2_alu_out :
-                        ex2_reg_src[1:0] == 2'h1 ? ex2_pcplus4 :
-                        ex2_reg_src[1:0] == 2'h2 ? ex2_imm :
-                        ex2_csr_out;
+assign ex2_raw_reg_in = ex2_reg_src == 3'h0 ? ex2_alu_out :
+                        ex2_reg_src == 3'h1 ? ex2_pcplus4 :
+                        ex2_reg_src == 3'h2 ? ex2_pcplusimm :
+                        ex2_reg_src == 3'h3 ? 32'h0 :        // load data not available in EX2; load-use is covered by mem_wait
+                        ex2_reg_src == 3'h4 ? ex2_imm :
+                        ex2_reg_src == 3'h5 ? ex2_csr_out :
+                        32'h0;
 
 assign ex2_raw_csr_in = ex2_csr_src == 2'h0 ? ex2_alu_out :
                         ex2_csr_src == 2'h1 ? ex2_reg_out_a_true :

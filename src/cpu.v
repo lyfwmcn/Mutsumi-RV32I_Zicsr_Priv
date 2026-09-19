@@ -375,8 +375,8 @@ if_stage if_stage (
 
 id_stage id_stage (
     .clk                    (clk),
-    .flush                  (trap | ret | actual_jump | ((reg_wait | csr_wait) & !mem_wait)),
-    .stall                  (mem_wait),
+    .flush                  (trap | ret | actual_jump),
+    .stall                  (reg_wait | csr_wait | mem_wait),
     .privilege              (privilege),
 
     .predtaken              (predtaken),
@@ -424,7 +424,7 @@ id_stage id_stage (
 
 ex1_stage ex1_stage (
     .clk                    (clk),
-    .flush                  (trap | ret | actual_jump),
+    .flush                  (trap | ret | actual_jump | ((reg_wait | csr_wait) & !mem_wait)),
     .stall                  (mem_wait),
     .csr_wait               (csr_wait),
     .reg_wait               (reg_wait),
