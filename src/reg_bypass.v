@@ -35,16 +35,16 @@ module reg_bypass (
 
 wire [3:0] cond_a;
 assign cond_a = ex1_reg_out_a_used == 1'h0 || ex1_rs1 == 5'h0 ? 4'h8 :
-               ex2_rd == ex1_rs1 && ex2_reg_wr == 1'h1 ? (ex2_reg_src[2] == 1'h1 ? 4'h7 : 4'h6) :
-               m1_rd == ex1_rs1 && m1_reg_wr == 1'h1 ? (m1_reg_src[2] == 1'h1 ? 4'h5 : 4'h4) :
-               m2_rd == ex1_rs1 && m2_reg_wr == 1'h1 ? (m2_reg_src[2] == 1'h1 ? 4'h3 : 4'h2) :
+               ex2_rd == ex1_rs1 && ex2_reg_wr == 1'h1 ? (ex2_reg_src == 3'h3 ? 4'h7 : 4'h6) :
+               m1_rd == ex1_rs1 && m1_reg_wr == 1'h1 ? (m1_reg_src == 3'h3 ? 4'h5 : 4'h4) :
+               m2_rd == ex1_rs1 && m2_reg_wr == 1'h1 ? (m2_reg_src == 3'h3 ? 4'h3 : 4'h2) :
                wb_rd == ex1_rs1 && wb_reg_wr == 1'h1 ? 4'h1 : 4'h0;
 
 wire [3:0] cond_b;
 assign cond_b = ex1_reg_out_b_used == 1'h0 || ex1_rs2 == 5'h0 ? 4'h8 :
-               ex2_rd == ex1_rs2 && ex2_reg_wr == 1'h1 ? (ex2_reg_src[2] == 1'h1 ? 4'h7 : 4'h6) :
-               m1_rd == ex1_rs2 && m1_reg_wr == 1'h1 ? (m1_reg_src[2] == 1'h1 ? 4'h5 : 4'h4) :
-               m2_rd == ex1_rs2 && m2_reg_wr == 1'h1 ? (m2_reg_src[2] == 1'h1 ? 4'h3 : 4'h2) :
+               ex2_rd == ex1_rs2 && ex2_reg_wr == 1'h1 ? (ex2_reg_src == 3'h3 ? 4'h7 : 4'h6) :
+               m1_rd == ex1_rs2 && m1_reg_wr == 1'h1 ? (m1_reg_src == 3'h3 ? 4'h5 : 4'h4) :
+               m2_rd == ex1_rs2 && m2_reg_wr == 1'h1 ? (m2_reg_src == 3'h3 ? 4'h3 : 4'h2) :
                wb_rd == ex1_rs2 && wb_reg_wr == 1'h1 ? 4'h1 : 4'h0;
 
 wire [31:0] ex1_reg_out_a_trues [8:0];

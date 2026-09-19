@@ -128,7 +128,7 @@ initial begin
     ex2_is_csr = 1'h0;
     ex2_is_instr = 1'h0;
     ex2_predtaken = 1'h0;
-    ex2_reg_wr = 1'h0;
+    ex2_reg_wr = 1'h1;
     ex2_ret = 1'h0;
     ex2_ret_type = 1'h0;
     ex2_rs1usem1 = 1'h0;
@@ -144,9 +144,9 @@ initial begin
     ex2_alu_in_b = 32'h0;
     ex2_csr_out = 32'h0;
     ex2_imm = 32'h0;
-    ex2_instr = 32'h0;
+    ex2_instr = 32'h13;
     ex2_pc = 32'h0;
-    ex2_pcplus4 = 32'h0;
+    ex2_pcplus4 = 32'h4;
     ex2_pcplusimm = 32'h0;
     ex2_reg_out_a = 32'h0;
     ex2_reg_out_b = 32'h0;
@@ -167,7 +167,7 @@ always @(posedge clk) begin
         ex2_is_csr <= 1'h0;
         ex2_is_instr <= 1'h0;
         ex2_predtaken <= 1'h0;
-        ex2_reg_wr <= 1'h0;
+        ex2_reg_wr <= 1'h1;
         ex2_ret <= 1'h0;
         ex2_ret_type <= 1'h0;
         ex2_rs1usem1 <= 1'h0;
@@ -183,9 +183,9 @@ always @(posedge clk) begin
         ex2_alu_in_b <= 32'h0;
         ex2_csr_out <= 32'h0;
         ex2_imm <= 32'h0;
-        ex2_instr <= 32'h0;
+        ex2_instr <= 32'h13;
         ex2_pc <= 32'h0;
-        ex2_pcplus4 <= 32'h0;
+        ex2_pcplus4 <= 32'h4;
         ex2_pcplusimm <= 32'h0;
         ex2_reg_out_a <= 32'h0;
         ex2_reg_out_b <= 32'h0;

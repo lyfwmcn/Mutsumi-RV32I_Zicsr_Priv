@@ -123,7 +123,7 @@ initial begin
     wb_csr_wr = 1'h0;
     wb_is_csr = 1'h0;
     wb_is_instr = 1'h0;
-    wb_reg_wr = 1'h0;
+    wb_reg_wr = 1'h1;
     wb_reg_src = 3'h0;
     wb_rd = 5'h0;
     wb_csr_rd = 12'h0;
@@ -132,8 +132,8 @@ initial begin
     wb_csr_out = 32'h0;
     wb_imm = 32'h0;
     wb_mem = 32'h0;
-    wb_nextpc = 32'h0;
-    wb_pcplus4 = 32'h0;
+    wb_nextpc = 32'h4;
+    wb_pcplus4 = 32'h4;
     wb_pcplusimm = 32'h0;
 end
 
@@ -142,7 +142,7 @@ always @(posedge clk) begin
         wb_csr_wr <= 1'h0;
         wb_is_csr <= 1'h0;
         wb_is_instr <= 1'h0;
-        wb_reg_wr <= 1'h0;
+        wb_reg_wr <= 1'h1;
         wb_reg_src <= 3'h0;
         wb_rd <= 5'h0;
         wb_csr_rd <= 12'h0;
@@ -151,8 +151,8 @@ always @(posedge clk) begin
         wb_csr_out <= 32'h0;
         wb_imm <= 32'h0;
         wb_mem <= 32'h0;
-        wb_nextpc <= 32'h0;
-        wb_pcplus4 <= 32'h0;
+        wb_nextpc <= 32'h4;
+        wb_pcplus4 <= 32'h4;
         wb_pcplusimm <= 32'h0;
     end
     else begin

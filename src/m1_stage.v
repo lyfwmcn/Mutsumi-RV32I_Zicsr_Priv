@@ -141,7 +141,7 @@ initial begin
     m2_data_wen = 1'h0;
     m2_is_csr = 1'h0;
     m2_is_instr = 1'h0;
-    m2_reg_wr = 1'h0;
+    m2_reg_wr = 1'h1;
     m2_ret = 1'h0;
     m2_ret_type = 1'h0;
     m2_fstcause_valid = 1'h0;
@@ -154,11 +154,11 @@ initial begin
     m2_csr_in = 32'h0;
     m2_csr_out = 32'h0;
     m2_imm = 32'h0;
-    m2_instr = 32'h0;
+    m2_instr = 32'h13;
     m2_jump_addr = 32'h0;
-    m2_nextpc = 32'h0;
+    m2_nextpc = 32'h4;
     m2_pc = 32'h0;
-    m2_pcplus4 = 32'h0;
+    m2_pcplus4 = 32'h4;
     m2_pcplusimm = 32'h0;
     m2_raw_reg_in = 32'h0;
 end
@@ -171,7 +171,7 @@ always @(posedge clk) begin
         m2_data_wen <= 1'h0;
         m2_is_csr <= 1'h0;
         m2_is_instr <= 1'h0;
-        m2_reg_wr <= 1'h0;
+        m2_reg_wr <= 1'h1;
         m2_ret <= 1'h0;
         m2_ret_type <= 1'h0;
         m2_fstcause_valid <= 1'h0;
@@ -184,11 +184,11 @@ always @(posedge clk) begin
         m2_csr_in <= 32'h0;
         m2_csr_out <= 32'h0;
         m2_imm <= 32'h0;
-        m2_instr <= 32'h0;
+        m2_instr <= 32'h13;
         m2_jump_addr <= 32'h0;
-        m2_nextpc <= 32'h0;
+        m2_nextpc <= 32'h4;
         m2_pc <= 32'h0;
-        m2_pcplus4 <= 32'h0;
+        m2_pcplus4 <= 32'h4;
         m2_pcplusimm <= 32'h0;
         m2_raw_reg_in <= 32'h0;
     end

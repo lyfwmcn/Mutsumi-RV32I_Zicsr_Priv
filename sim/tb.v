@@ -76,7 +76,7 @@ initial begin
     timer_interrupt_clear <= 1'h0;
     timer_interrupt_set <= 1'h0;
     #1000
-    $display("100:       %h", system_bus.mem[100]);
+    $display("4092:       %h", system_bus.mem[4092]);
     // $display("101:       %h", system_bus.mem[101]);
     // $display("102:       %h", system_bus.mem[102]);
     // $display("103:       %h", system_bus.mem[103]);

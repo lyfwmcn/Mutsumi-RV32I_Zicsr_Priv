@@ -94,12 +94,12 @@ initial begin
     ex1_is_csr = 1'h0;
     ex1_is_instr = 1'h0;
     ex1_predtaken = 1'h0;
-    ex1_reg_out_a_used = 1'h0;
+    ex1_reg_out_a_used = 1'h1;
     ex1_reg_out_b_used = 1'h0;
-    ex1_reg_wr = 1'h0;
+    ex1_reg_wr = 1'h1;
     ex1_ret = 1'h0;
     ex1_ret_type = 1'h0;
-    ex1_alu_src_b = 2'h0;
+    ex1_alu_src_b = 2'h1;
     ex1_csr_src = 2'h0;
     ex1_mem_ctr = 3'h0;
     ex1_reg_src = 3'h0;
@@ -110,9 +110,9 @@ initial begin
     ex1_alu_ctr = 6'h0;
     ex1_csr_rd = 12'h0;
     ex1_imm = 32'h0;
-    ex1_instr = 32'h0;
+    ex1_instr = 32'h13;
     ex1_pc = 32'h0;
-    ex1_pcplus4 = 32'h0;
+    ex1_pcplus4 = 32'h4;
     ex1_pcplusimm = 32'h0;
 end
 
@@ -130,12 +130,12 @@ always @(posedge clk) begin
         ex1_is_csr <= 1'h0;
         ex1_is_instr <= 1'h0;
         ex1_predtaken <= 1'h0;
-        ex1_reg_out_a_used <= 1'h0;
+        ex1_reg_out_a_used <= 1'h1;
         ex1_reg_out_b_used <= 1'h0;
-        ex1_reg_wr <= 1'h0;
+        ex1_reg_wr <= 1'h1;
         ex1_ret <= 1'h0;
         ex1_ret_type <= 1'h0;
-        ex1_alu_src_b <= 2'h0;
+        ex1_alu_src_b <= 2'h1;
         ex1_csr_src <= 2'h0;
         ex1_mem_ctr <= 3'h0;
         ex1_reg_src <= 3'h0;
@@ -146,9 +146,9 @@ always @(posedge clk) begin
         ex1_alu_ctr <= 6'h0;
         ex1_csr_rd <= 12'h0;
         ex1_imm <= 32'h0;
-        ex1_instr <= 32'h0;
+        ex1_instr <= 32'h13;
         ex1_pc <= 32'h0;
-        ex1_pcplus4 <= 32'h0;
+        ex1_pcplus4 <= 32'h4;
         ex1_pcplusimm <= 32'h0;
     end
     else if (!stall) begin

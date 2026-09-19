@@ -90,7 +90,7 @@ assign full = buffer_count + pending_requests_count >= 4'h8;
 assign instr_fault = empty ? 1'h0 : instr_fault_buffer[buffer_read_pos[2:0]];
 assign instr = empty ? 32'h13 : instr_buffer[buffer_read_pos[2:0]];
 assign pc = empty ? 32'h0 : pc_buffer[buffer_read_pos[2:0]];
-assign pcplus4 = empty ? 32'h0 : pcplus4_buffer[buffer_read_pos[2:0]];
+assign pcplus4 = empty ? 32'h4 : pcplus4_buffer[buffer_read_pos[2:0]];
 
 // 是否完成/丢弃一个挂起请求
 wire pending_requests_read;

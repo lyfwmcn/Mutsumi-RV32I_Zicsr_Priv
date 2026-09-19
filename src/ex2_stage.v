@@ -92,7 +92,7 @@ wire [31:0] ex2_reg_out_b_true;
 wire [31:0] ex2_raw_csr_in;
 
 initial begin
-    m1_zf = 1'h0;
+    m1_zf = 1'h1;
     m1_cf = 1'h0;
     m1_sf = 1'h0;
     m1_of = 1'h0;
@@ -107,7 +107,7 @@ initial begin
     m1_is_csr = 1'h0;
     m1_is_instr = 1'h0;
     m1_predtaken = 1'h0;
-    m1_reg_wr = 1'h0;
+    m1_reg_wr = 1'h1;
     m1_ret = 1'h0;
     m1_ret_type = 1'h0;
     m1_mem_ctr = 3'h0;
@@ -118,9 +118,9 @@ initial begin
     m1_alu_out = 32'h0;
     m1_csr_out = 32'h0;
     m1_imm = 32'h0;
-    m1_instr = 32'h0;
+    m1_instr = 32'h13;
     m1_pc = 32'h0;
-    m1_pcplus4 = 32'h0;
+    m1_pcplus4 = 32'h4;
     m1_pcplusimm = 32'h0;
     m1_raw_csr_in = 32'h0;
     m1_raw_reg_in = 32'h0;
@@ -143,7 +143,7 @@ always @(posedge clk) begin
         m1_instr_page_fault <= 1'h0;
         m1_is_csr <= 1'h0;
         m1_is_instr <= 1'h0;
-        m1_predtaken <= 1'h0;
+        m1_predtaken <= 1'h1;
         m1_reg_wr <= 1'h0;
         m1_ret <= 1'h0;
         m1_ret_type <= 1'h0;
@@ -155,9 +155,9 @@ always @(posedge clk) begin
         m1_alu_out <= 32'h0;
         m1_csr_out <= 32'h0;
         m1_imm <= 32'h0;
-        m1_instr <= 32'h0;
+        m1_instr <= 32'h13;
         m1_pc <= 32'h0;
-        m1_pcplus4 <= 32'h0;
+        m1_pcplus4 <= 32'h4;
         m1_pcplusimm <= 32'h0;
         m1_raw_csr_in <= 32'h0;
         m1_raw_reg_in <= 32'h0;
