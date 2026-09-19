@@ -84,7 +84,7 @@ end
 always @(posedge clk) begin
     respond_valid_data <= request_valid_data_reg;
     respond_fault_data <= request_valid_data_reg ? request_addr_data_reg[1:0] != 2'h0 || request_addr_data_reg[31:12] != 20'h0 : 1'h0;
-    respond_data_data <= request_valid_data_reg && !request_write_data ?
+    respond_data_data <= request_valid_data_reg && !request_write_data_reg ?
                             {mem[{request_addr_data_reg[31:2], 2'h3}],
                             mem[{request_addr_data_reg[31:2], 2'h2}],
                             mem[{request_addr_data_reg[31:2], 2'h1}],

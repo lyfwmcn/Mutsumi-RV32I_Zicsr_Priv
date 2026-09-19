@@ -75,7 +75,25 @@ initial begin
     external_interrupt_set <= 1'h0;
     timer_interrupt_clear <= 1'h0;
     timer_interrupt_set <= 1'h0;
+    // t=1000: timer pending while MIE = 0 -> must stay masked (scenario A)
     #1000
+    timer_interrupt_set <= 1'h1;
+    #2000
+    timer_interrupt_clear <= 1'h1;
+    // t=3000: external pending while MIE = 0 -> must stay masked (scenario A)
+    #1000
+    external_interrupt_set <= 1'h1;
+    #2000
+    external_interrupt_clear <= 1'h1;
+    // t=5000: both raise together while the program spins with MIE = 1.
+    // External (11) must win; clear both soon after so delivery is bounded.
+    #1000
+    external_interrupt_set <= 1'h1;
+    timer_interrupt_set <= 1'h1;
+    #200
+    external_interrupt_clear <= 1'h1;
+    timer_interrupt_clear <= 1'h1;
+    #8000
     $display("4092:       %h", system_bus.mem[4092]);
     // $display("101:       %h", system_bus.mem[101]);
     // $display("102:       %h", system_bus.mem[102]);
