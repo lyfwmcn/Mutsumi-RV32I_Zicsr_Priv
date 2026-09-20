@@ -29,7 +29,7 @@ module system_bus #(
     output reg        respond_valid_instr,
     output reg [31:0] respond_data_data,
     output reg [31:0] respond_data_instr,
-    // 写 0xFFC~0xFFF 时，把写入字节从串口送出（8N1）
+    // 写地址 0xFFC 时，把 request_data_data[7:0] 从串口送出（8N1）
     output            uart_tx
 );
 
@@ -83,9 +83,8 @@ wire respond_valid_instr_wire;
 wire [31:0] respond_data_data_wire;
 wire [31:0] respond_data_instr_wire;
 
-assign respond_fault_data_wire = request_addr_data_reg[1:0] != 2'h0 || request_addr_data_reg[31:12] != 20'h0;
+assign respond_fault_data_wire = request_valid_data_reg && (request_addr_data_reg[1:0] != 2'h0 || request_addr_data_reg[31:12] != 20'h0);
 assign respond_fault_instr_wire = request_addr_instr_reg[1:0] != 2'h0 || request_addr_instr_reg[31:12] != 20'h0;
-assign respond_valid_data_wire = request_valid_data_reg;
 assign respond_valid_instr_wire = request_valid_instr_reg;
 
 // 数据字与取指字的 32bit 拼装（字节 3 在最高位，与原 {mem[A+3],..,mem[A]} 一致）
@@ -126,106 +125,6 @@ always @(posedge clk) begin
     end
 end
 
-// ---------------------------------------------------------------------------
-// 串口输出：对 0xFFC~0xFFF（字 1023）的写，会把「被字节使能选中的字节」按
-// lane0→lane3 顺序从 uart_tx 发出（8N1）。整字写(sw)发 4 个字符、字节写(sb)
-// 发 1 个（CPU 会把子字的字节摆到对应 lane 并置 en）。
-// 发送期间压住 respond_valid_data（背压）→ CPU 等它发完，不会丢字节。
-// ---------------------------------------------------------------------------
-wire       uart_busy;
-reg        uart_start;
-reg  [7:0] uart_byte;
-
-uart_tx #(.DIV(UART_DIV)) u_uart_tx (
-    .clk  (clk),
-    .rst_n(rst_n),
-    .start(uart_start),
-    .data (uart_byte),
-    .busy (uart_busy),
-    .tx   (uart_tx)
-);
-
-localparam UART_IDLE = 2'd0,
-           UART_SEND = 2'd1,
-           UART_WAIT = 2'd2;
-
-reg  [1:0]  uart_state;
-reg  [31:0] uart_data_q;
-reg  [3:0]  uart_en_q;
-reg  [1:0]  uart_sel;
-reg         uart_done;
-
-// 命中条件与 store 落盘一致：对齐、0x0~0xFFF 内、且是字 1023（字节 0xFFC~0xFFF）
-wire uart_hit = request_valid_data_reg && request_write_data_reg &&
-                request_addr_data_reg[1:0] == 2'h0 &&
-                request_addr_data_reg[31:12] == 20'h0 &&
-                request_addr_data_reg[11:2] == 10'h3FF;
-// 还有字节没交给 UART → 压住本次响应
-wire uart_hold = uart_hit && (request_en_data_reg != 4'h0) && !uart_done;
-// The CPU may replace one completed store with the next store without
-// dropping request_valid_data for a full cycle.  Treat a changed payload or
-// byte-enable mask as a new UART transaction in that case.
-wire uart_new_request = uart_hit && uart_done &&
-                        ((request_data_data_reg != uart_data_q) ||
-                         (request_en_data_reg != uart_en_q));
-
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-        uart_state  <= UART_IDLE;
-        uart_data_q <= 32'h0;
-        uart_en_q   <= 4'h0;
-        uart_sel    <= 2'd0;
-        uart_done   <= 1'b0;
-        uart_start  <= 1'b0;
-        uart_byte   <= 8'h0;
-    end
-    else begin
-    uart_start <= 1'b0;                            // 单周期脉冲
-    if (!request_valid_data_reg) begin
-        uart_done <= 1'b0;                         // 请求撤销后才允许下一次
-    end
-    case (uart_state)
-        UART_IDLE: begin
-            if (uart_hold || uart_new_request) begin
-                uart_data_q <= request_data_data_reg;
-                uart_en_q   <= request_en_data_reg;
-                uart_sel    <= 2'd0;
-                uart_done   <= 1'b0;
-                uart_state  <= UART_SEND;
-            end
-        end
-        UART_SEND: begin
-            if (!uart_en_q[uart_sel]) begin        // 该 lane 未使能 → 跳过
-                if (uart_sel == 2'd3) begin
-                    uart_state <= UART_IDLE;
-                    uart_done  <= 1'b1;
-                end
-                else begin
-                    uart_sel <= uart_sel + 2'd1;
-                end
-            end
-            else if (!uart_busy) begin
-                uart_byte  <= uart_data_q[uart_sel*8 +: 8];
-                uart_start <= 1'b1;                // 交给 UART
-                uart_state <= UART_WAIT;
-            end
-        end
-        default: begin                             // UART_WAIT
-            if (!uart_busy) begin                  // 发送完成 → 下一个字节
-                if (uart_sel == 2'd3) begin
-                    uart_state <= UART_IDLE;
-                    uart_done  <= 1'b1;
-                end
-                else begin
-                    uart_sel   <= uart_sel + 2'd1;
-                    uart_state <= UART_SEND;
-                end
-            end
-        end
-    endcase
-    end
-end
-
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         respond_valid_instr <= 1'h0;
@@ -241,24 +140,54 @@ always @(posedge clk or negedge rst_n) begin
     end
 end
 
+// ---------------------------------------------------------------------------
+// 串口输出：写地址 0xFFC → 发送 request_data_data[7:0]（8N1）。
+// 识别到写请求后启动一次发送，并在本次发送真正完成（busy 拉高后再拉低）之前
+// 一直保持 respond_valid_data = 0，让 CPU 等这一字节发完再继续。
+// ---------------------------------------------------------------------------
+wire       uart_busy;
+wire       uart_start;
+wire [7:0] uart_byte;
+
+assign uart_start = request_valid_data_reg && request_write_data_reg &&
+                    request_addr_data_reg[11:0] == 12'hFFC;
+assign uart_byte = request_data_data_reg[7:0];
+
+reg uart_pending;
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        uart_pending <= 1'h0;
+    end
+    else if (uart_start && !uart_busy) begin
+        uart_pending <= 1'h1;
+    end
+    else if (uart_pending && !uart_busy) begin
+        uart_pending <= 1'h0;
+    end
+end
+
+uart_tx_unit #(.DIV(UART_DIV)) uart_tx_unit (
+    .clk  (clk),
+    .rst_n(rst_n),
+    .start(uart_start),
+    .data (uart_byte),
+    .busy (uart_busy),
+    .tx   (uart_tx)
+);
+
+assign respond_valid_data_wire = (request_valid_data_reg && !uart_start) || uart_pending && !uart_busy;
+
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
         respond_fault_data <= 1'h0;
         respond_valid_data <= 1'h0;
         respond_data_data <= 32'h0;
     end
-    // A UART store may finish after the CPU withdraws its request.  The
-    // completion flag must still generate the response pulse, otherwise the
-    // pipeline can stop after the first transmitted byte.
-    else if ((request_valid_data_reg && !uart_hold) || uart_done) begin
+    else begin
+        respond_valid_data <= respond_valid_data_wire;
         respond_fault_data <= respond_fault_data_wire;
-        respond_valid_data <= 1'h1;
         respond_data_data <= respond_data_data_wire;
-    end
-    else if (!request_valid_data_reg) begin
-        respond_fault_data <= 1'h0;
-        respond_valid_data <= 1'h0;
-        respond_data_data <= 32'h0;
     end
 end
 

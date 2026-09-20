@@ -28,6 +28,6 @@ src/trap_csr_bypass.v
 
 src/cpu.v
 
-syn/uart_tx.v
+syn/uart_tx_unit.v
 syn/system_bus.v
 syn/top.v
