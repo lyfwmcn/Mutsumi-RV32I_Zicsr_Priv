@@ -1,49 +1,60 @@
 # AGENTS.md
 
-Course-style Chinese Verilog project: a pipelined RV32I + Zicsr RISC-V core (M/S/U privilege, CSR, traps/exceptions, paging) for iCESugar-Pro (ECP5) / iCESugar (iCE40). Simulation-first. **Design reference (encodings/CSR/exception tables, Chinese) lives in `docs/RV32I_Zicsr_Ref.md`**; `README.md` is only a bare toolchain quickstart and is stale on the test layout. Everything builds and runs from the repo root via one Makefile.
+Pipelined RV32I + Zicsr RISC-V core (M/S/U privilege, CSR, traps) for iCESugar-Pro (ECP5). Simulation-first. Encodings/CSR/exception tables live in `docs/RV32I_Zicsr_Ref.md` (Chinese). `README.md` is a short Chinese toolchain quickstart whose progress notes are stale — trust the Makefile, not the README. Everything runs from the repo root via one Makefile. Primary working branch is `Develop` (`origin/HEAD` points at `main`).
 
-## Directory layout (get this right — it changed before)
+## Reset model and build state
 
-- `src/` — CPU RTL: `CPU.v` plus stage/unit modules (no testbench here).
-- `sim/` — simulation-only: `sim/SystemBus.v` (behavioral `reg [7:0] mem[4095:0]`) and `sim/tb.v` (dumps `build/wave.vcd`).
-- `syn/` — synthesis-only board shell: `top.v`, `top.lpf`, `SystemBus.v` (ECP5 EBR lane variant), `report.v`, `rst_gen.v`, `uart_tx.v`.
-- **There are two `module SystemBus` variants (`sim/SystemBus.v` vs `syn/SystemBus.v`). They must keep identical module name and port list** — CPU wires the same bus in `sim/tb.v` and `syn/top.v`. Change memory behavior in the matching variant; a port change must land in both. The sim variant loads `build/sim_test.bin` at t=0 and has an MMIO byte-out: a store to `0xFFC` does `$write("%c", ...)` (this is what `tests/sim/main.c` `putc` uses). The syn variant is `mem0`/`mem1` 18-bit EBR lanes with a `translate_off` byte mirror for simulation, and has no UART (board printing is `syn/report.v`).
-- `filelists/sim_filelist.f` and `filelists/syn_filelist.f` — iverilog (sim) and yosys (syn) source lists. Both include `src/*`. `sim` adds `sim/SystemBus.v` + `sim/tb.v`; `syn` adds the `syn/*` RTL and **must not** contain any tb. New files go into the right list or the tool won't see them.
-- `tests/sim/` — the simulation program: `start.s` (`_start` sets `sp`, `call main`), `main.c`, `linker.ld` (adds a 1K stack). `make sim` builds exactly these.
-- `tests/syn/` — the board program: `test.s` + `linker.ld`. `make synth` builds exactly these. **The sim and board programs are now different source trees** (formerly one `tests/test.s`).
-- `tests/<Category>/test.s` (R, S, B, Load, J, Jalr, ArithmeticI, CSR) are **standalone reference snippets not referenced by the Makefile**. Do not drop one into `tests/sim/` or `tests/syn/` as-is — both already define `_start`; adapt the body manually.
-- `tools/bin2hex.py` — `build/syn_test.bin` → `build/syn_mem0.hex` + `build/syn_mem1.hex` (EBR lane words, 4KB zero-padded; lane layout documented in the file and `syn/SystemBus.v`).
-- `tools/stage_timing.py` — parses nextpnr detailed-timing JSON into a per-pipeline-stage table.
-- `build/` — all artifacts (gitignored); `.vscode/` is gitignored too.
+- `src/` is **reset-based**: every flop is `always @(posedge clk or negedge rst_n)`, with no `initial` state init and no power-on defaults. `rst_n` is an active-low async-assert port on `cpu` and every submodule.
+- Sim vs board reset: `sim/tb.v` holds `rst_n = 0` for 200 ns then releases; `syn/top.v` derives `rst_n` from an 8-bit counter that releases at `0xFF` (255 clocks). Anything that depends on initial state must work under both.
+- `make`, `make all`, `make sim` work end-to-end (verified); the sim prints six `.` then `OK`.
+- `make timing` runs, but `tools/stage_timing.py` still keys on old CamelCase tokens (`IFStage`, `EXStage`, `M1Stage`, …) and has no EX1/EX2 split, so every net lands in `OTHER`. Fix `STAGE_TOKENS`/`STAGE_ORDER` to the snake_case names (`if_stage`, `id_stage`, `ex1_stage`, `ex2_stage`, `m1_stage`, `m2_stage`, `wb_stage`, `system_bus`, `reg_file`, `csr_file`, `privilege_mode`) before trusting its per-stage table.
 
-## Commands (must run from repo root — paths are root-relative)
+## Layout
 
-- `make` / `make sim` — compile `tests/sim/start.s` + `tests/sim/main.c`, link `tests/sim/linker.ld` → `build/sim_test.bin`, iverilog `-f filelists/sim_filelist.f`, run `build/sim`. Reads `build/sim_test.bin` at runtime; tb dumps `build/wave.vcd` and prints a couple regs (`x5`,`x6`) at **t=20000 ns (~2000 cycles)** then `$finish`.
-- `make synth` — yosys (`syn_filelist.f`, EBR INIT from `build/syn_mem0/1.hex`) → nextpnr-ecp5 `--freq 65` → ecppack → `build/top.bit`, **then auto-programs the board** by copying to the iCELink volume (requires it mounted at `/run/media/$USER/iCELink`; errors otherwise). The board program is `tests/syn/test.s`. If the new config doesn't start, replug USB to reload from SPI flash.
-- `make timing` — synthesizes a separate `build/timing_synth.json` with `synth_ecp5 -noflatten` (the bitstream `top.json` stays flattened), then nextpnr-ecp5 `--freq 25 --detailed-timing-report` → `build/timing.json`, then `tools/stage_timing.py` → `build/stage_timing.md` + `build/stage_timing.csv`. `-noflatten` is required: the default flatten/techmap erases `IDStage`/`M1Stage` cell names, so the script's stage tokens can't see those stages. Also `detailed_net_timings[].sources` are RTL `src` location strings, not cell names.
-- `make clean` — removes `build/`.
-- Compile flags: `-march=rv32i_zicsr -mabi=ilp32 -ffreestanding`. No test framework, lint, or CI.
-- ECP5 toolchain gotcha: nextpnr here is the archlinuxcn `-git` build, so the paired package is `prjtrellis-db-git`, **not** the release `prjtrellis-db` (release db crashes ecppack with `row_bias`).
+- `src/` — CPU RTL, all snake_case. Pipeline **IF → ID → EX1 → EX2 → M1 → M2 → WB**, wired in `src/cpu.v`. Submodules live inside their stage: `if_stage`→`pc_reg`,`instr_buffer_unit`; `id_stage`→`idu`; `ex1_stage`→`reg_bypass`,`csr_hazard`; `ex2_stage`→`alu`; `m1_stage`→`bu`,`csr_read`; `m2_stage`→`trap_unit`; `wb_stage` is pure combinational (reg-source mux, no clock). Top-level in `cpu.v`: `csr_file`, `privilege_mode`, `reg_file`, `trap_csr_bypass`.
+- `sim/` — behavioral testbench: `system_bus.v` (4 KB byte memory, `$fread("build/sim_test.bin")`, `$write`s a byte on a store to **0xFFC**) and `tb.v`.
+- `syn/` — board: `top.v` (reset counter + `cpu` + `system_bus` + activity LEDs), `top.lpf`, `system_bus.v` (true-dual-port `DP16KD` EBR lanes + UART), `uart_tx.v`. `top_bustest.v` is an untracked, CPU-less bus-liveness test that defines an alternate `top` (pick one or it collides).
+- The two `system_bus` files share the module name but **not the port list** now: `syn/system_bus.v` adds `rst_n` and `uart_tx`, `sim/system_bus.v` has neither. A port change still needs both. Memory init also differs: sim `$fread`s the binary; syn `$readmemh`s `build/syn_mem0/1.hex` (kept in an `initial` so sim and EBR INIT agree).
+- `filelists/sim_filelist.f` / `syn_filelist.f` — iverilog vs yosys source lists. New files must be added to the correct list or the tool won't see them.
+- `tests/sim/` — sim program: `start.s` (self-checking S-mode delegation test), empty `trap.s`, commented-out `main.c`, `linker.ld`. `tests/syn/` — board program `test.s` + `linker.ld`.
+- `tests/<Category>/test.s` (R, S, B, Load, J, Jalr, ArithmeticI, CSR) — standalone reference snippets, **not referenced by the Makefile**. Don't drop one into `tests/sim/` or `tests/syn/` as-is (each defines `_start`).
+- `tools/` — `bin2hex.py` (bin → EBR lane hex), `stage_timing.py` (nextpnr JSON → stage table), `timing_report.py` (readable nextpnr timing/path-collapse report), `json_deal.py` (JSON pretty-printer).
+- `build/` (all artifacts) and `.vscode/` are gitignored; `abc.history` is a stray untracked yosys/abc artifact at the root.
 
-## Microarchitecture (wiring in `src/CPU.v`)
+## Commands (run from repo root — paths are root-relative)
 
-- Pipeline `IF → ID → EX → M1 → M2 → WB`; M1 issues the data-bus request, M2 consumes the response with alignment/fault checks.
-- Hazard/forwarding units instantiated in `CPU.v`: `RegByPass` (GPR fwd + `RegWait`), `CSRHazard` (CSR RAW → `CSRWait`), `TrapCSRByPass`. Stalls `RegWait|CSRWait|MemWait`; flush conditions are per-stage and subtle — e.g. IF flush `ActualJump | (PredJump & !RegWait & !CSRWait & !MemWait) | Trap | Ret`, ID flush differs. Don't simplify these blindly.
-- Memory: 4KB, access must be aligned and within 0x0–0xFFF; misaligned/out-of-range accesses fault and stores are dropped (both SystemBus variants enforce this). 0xE00–0xF00 are ordinary memory in sim but have report semantics on the board.
+- `make` / `make all` / `make sim` — compile `tests/sim/*` + link via `tests/sim/linker.ld` → `build/sim_test.bin`, then iverilog `-f filelists/sim_filelist.f` → `build/sim` and run it. The sim reads `build/sim_test.bin` at runtime; `tb.v` dumps `build/wave.vcd`.
+- `make synth` — yosys `synth_ecp5` → nextpnr-ecp5 `--freq 65` → ecppack → `build/top.bit`, **then auto-programs** by copying to the iCELink volume (must be mounted at `/run/media/$USER/iCELink`). If the new config doesn't start, replug USB to reload from SPI flash.
+- `make timing` — same synth → nextpnr `--freq 25 --detailed-timing-report` → `tools/stage_timing.py` (caveat above). It does **not** pass `-noflatten`; ABC9 keeps `cpu.<stage>.<sub>` cell names in the JSON, so the names are snake_case, not the script's CamelCase tokens.
+- `make clean`.
+- Flags: `-march=rv32i_zicsr -mabi=ilp32 -ffreestanding`. No lint, CI, or test framework in-repo.
+- **CWD matters**: `syn/system_bus.v` does `$readmemh("build/syn_mem0.hex", ...)` and `sim/system_bus.v` does `$fopen("build/sim_test.bin")`; yosys/iverilog must run from the repo root (the Makefile does).
 
-## Board observability (`syn/report.v`)
+## Bus and board
 
-- A store to mailbox **0xF00** triggers a UART dump of the 32-word report window **0xE00–0xE7F** (8 hex + CRLF per word, then `PASS`), repeating every ~1 s. LEDs: 000 idle, 001 dumping, 111 PASS steady, blink=FAIL (timeout: mailbox never written).
-- So a board program must store results to 0xE00.. and write 0xF00. **Burning a variant that never writes 0xF00 → FAIL blink and no serial** (silent-looking). `tests/syn/test.s` already does both.
-- Board: ECP5 LFE5U-25F CABGA256, clk **P6 = 25 MHz**, RGB LED {A11,A12,B11}, UART **TX=B9 → iCELink USB-CDC** `/dev/ttyACM0` @115200. A11/A12/B11/B9 share an IO bank: keep them all **LVCMOS33** in `syn/top.lpf` or nextpnr rejects mixed bank voltages. CRLF is handled; bare LF makes terminals staircase. ModemManager may steal the port and eat automated captures — manual terminals usually work.
+- Both bus variants fault on misaligned or out-of-`0x0–0xFFF` accesses and drop the store.
+- Board serial: writes to **0xFFC–0xFFF (word 1023)** send each byte-enabled lane out `uart_tx` in lane0→lane3 order (8N1, `UART_DIV = 25e6/115200 = 217`), back-pressuring `respond_valid_data` until each byte is sent. The sim variant instead `$write`s `data[7:0]` once. There is **no 0xE00/0xF00 report mailbox**; `tests/syn/test.s` writes 0xFFC and prints `Mutsumi RV32I`.
+- `syn/top.lpf`: clk **P6**, LEDs `led_r=B11 led_g=A11 led_b=A12`, `uart_tx=B9 DRIVE=4`, all `LVCMOS33` (mixed bank voltages are rejected). LEDs show bus activity (`led_r/g/b` = instr request valid / data request valid / write), not PASS/FAIL.
+- The LPF `FREQUENCY PORT "clk" 25 MHZ` **overrides the Makefile's `--freq 65`** — nextpnr logs `constraining clock net 'clk' to 25.00 MHz`; the real constraint is 25 MHz.
 
-## Testing pitfalls (learned the hard way)
+## Microarchitecture and hazards
 
-- `tb.v` samples **once at t=20000 ns and is not a correctness oracle**. A real bug (taken-branch redirect left stale in-flight prefetch in `InstrBufferUnit.v`; fixed) made the CPU run off into zero padding and trap-loop to `mtvec=0`; restarts rewrote registers to identical values, hiding it from the snapshot.
-- Cheap detector: `j loop` immediately followed by a store you never expect to run (sentinel) — if the sentinel address is nonzero, a taken branch leaked. For loop/branch/flush changes, raise tb's sample time and confirm the PC parks in the intended loop with zero traps before trusting reg dumps.
-- `mtvec` resets to 0 and `tests/sim/linker.ld` defines no handler; trap tests must both `csrw mtvec` and add a handler section to the linker script.
-- `syn/SystemBus.v` mixes async-reset and non-async-reset registers deliberately: address/data registers are left un-reset so yosys can absorb them into EBR input registers. Don't "tidy" them into the async-reset block.
+- Forwarding: `reg_bypass` (GPR, inside `ex1_stage`), `csr_hazard` (EX1 CSR read vs in-flight writes), `trap_csr_bypass` (top-level; M2/WB CSR bypass). Stall = `reg_wait | csr_wait | mem_wait`.
+- `src/cpu.v` flush terms differ per stage and are subtle (IF also flushes on mispredict when no stall pending; ID on `(reg_wait|csr_wait)&!mem_wait`; M2 only on `trap|mem_wait`). Don't simplify blindly.
+- CSR reads resolve in EX1 (`csr_rs`/`csr_out` are `ex1_*`); M2/WB writes are bypassed around in-flight ops.
+- `syn/system_bus.v` deliberately keeps its address/data registers in a plain `always @(posedge clk)` block (no `rst_n`) so yosys absorbs them into EBR input registers; don't "tidy" an async reset in or place/route/BRAM inference breaks. The valid/enable registers do take `rst_n`.
 
-## Editor (optional, gitignored `.vscode/`)
+## Testing pitfalls
 
-- `.vscode/settings.json` enables verible-verilog-ls for cross-file module jumps (built-in Verilog features only index the open file). No `verible.filelist` needed — verible resolves modules across the workspace on its own.
+- `sim/tb.v` is a scenario harness (drives the timer/external interrupt lines; prints regs and `mem[4092]` at ~t=15200 ns), **not a correctness oracle** for the CPU. Raise the sample time and confirm the PC parks in the intended loop with zero traps before trusting dumps.
+- `tests/sim/start.s` is the real sim test (M/S exception delegation): it prints `.`/`F` per check to address 4092, then `OK`/`FAIL`. Empty `tests/sim/trap.s` and commented-out `main.c` contribute nothing, and `tests/sim/linker.ld` defines no trap handler section.
+- Cheap detector for flush/taken-branch bugs: put `j loop` immediately before a store you never expect to run (sentinel); if that address becomes nonzero, a redirected fetch leaked stale state.
+- **iverilog requires net declarations before use** in continuous assignments, while yosys tolerates late ones. Keep `wire`/`reg` declarations above the `assign`/instance that references them (e.g. `m1_nextpc`, the `Data8S`/`Data16S`/`Data32`/`Data8U`/`Data16U` decode wires) or synth passes while `make sim` fails elaboration.
+
+## Toolchain gotcha
+
+nextpnr here is the archlinuxcn `-git` build (verified: `nextpnr-git 0.11.1.r30`); pair it with `prjtrellis-db-git`. The release `prjtrellis-db` crashes `ecppack` with `row_bias`.
+
+## Editor (optional, gitignored)
+
+`.vscode/settings.json` enables verible-verilog-ls for cross-file module jumps and verilator lint with `-y src -y sim -y syn` (its `-y src/stubs` path does not exist).
