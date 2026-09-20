@@ -50,12 +50,16 @@ wire [31:0] cur_mtvec;
 wire [31:0] cur_sepc;
 wire [31:0] cur_stvec;
 
+wire        interrupt_cause_valid;
+wire        medeleg_exception_cause;
+wire        mideleg_interrupt_cause;
 wire        MIE;
 wire        MPIE;
 wire        SIE;
 wire        SPIE;
 wire        SPP;
 wire [1:0]  MPP;
+wire [3:0]  interrupt_cause;
 wire [31:0] medeleg;
 wire [31:0] mepc;
 wire [31:0] mideleg;
@@ -166,6 +170,7 @@ wire        m1_ret;
 wire        m1_ret_type;
 wire [2:0]  m1_mem_ctr;
 wire [2:0]  m1_reg_src;
+wire [3:0]  m1_fstcause;
 wire [4:0]  m1_branch_ctr;
 wire [4:0]  m1_rd;
 wire [11:0] m1_csr_rd;
@@ -295,7 +300,7 @@ csr_file csr_file (
 
 trap_csr_bypass trap_csr_bypass (
     .clk        (clk),
-    .rst_n (rst_n),
+    .rst_n      (rst_n),
     .flush      (trap | ret | actual_jump),
     .stall      (mem_wait),
     .cur_MIE    (cur_MIE),
@@ -306,6 +311,8 @@ trap_csr_bypass trap_csr_bypass (
     .m2_csr_wr  (m2_csr_wr),
     .wb_csr_wr  (wb_csr_wr),
     .cur_MPP    (cur_MPP),
+    .privilege  (privilege),
+    .m1_fstcause(m1_fstcause),
     .m2_csr_rd  (m2_csr_rd),
     .wb_csr_rd  (wb_csr_rd),
     .cur_medeleg(cur_medeleg),
@@ -318,12 +325,16 @@ trap_csr_bypass trap_csr_bypass (
     .cur_stvec  (cur_stvec),
     .m2_csr_in  (m2_csr_in),
     .wb_csr_in  (wb_csr_in),
+    .interrupt_cause_valid(interrupt_cause_valid),
+    .medeleg_exception_cause(medeleg_exception_cause),
+    .mideleg_interrupt_cause(mideleg_interrupt_cause),
     .MIE        (MIE),
     .MPIE       (MPIE),
     .SIE        (SIE),
     .SPIE       (SPIE),
     .SPP        (SPP),
     .MPP        (MPP),
+    .interrupt_cause(interrupt_cause),
     .medeleg    (medeleg),
     .mepc       (mepc),
     .mideleg    (mideleg),
@@ -620,6 +631,8 @@ m1_stage m1_stage (
     .request_addr_data     (request_addr_data),
     .request_data_data     (request_data_data),
 
+    .m1_fstcause           (m1_fstcause),
+
     .m1_zf                 (m1_zf),
     .m1_cf                 (m1_cf),
     .m1_sf                 (m1_sf),
@@ -683,8 +696,11 @@ m1_stage m1_stage (
 
 m2_stage m2_stage (
     .clk                   (clk),
-    .rst_n (rst_n),
+    .rst_n                 (rst_n),
     .flush                 (trap | mem_wait),
+    .interrupt_cause_valid (interrupt_cause_valid),
+    .medeleg_exception_cause(medeleg_exception_cause),
+    .mideleg_interrupt_cause(mideleg_interrupt_cause),
     .MIE                   (MIE),
     .MPIE                  (MPIE),
     .SIE                   (SIE),
@@ -692,6 +708,7 @@ m2_stage m2_stage (
     .SPP                   (SPP),
     .MPP                   (MPP),
     .privilege             (privilege),
+    .interrupt_cause       (interrupt_cause),
     .medeleg               (medeleg),
     .mideleg               (mideleg),
     .mie                   (mie),

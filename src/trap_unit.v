@@ -4,11 +4,14 @@
 // 需保证 privilege = 2'h0, 2'h1, 2'h3
 // 需保证 MPP = 2'h0, 2'h1, 2'h3
 module trap_unit (
+    input         interrupt_cause_valid,
     input         m2_fstcause_valid,
     input         m2_load_access_fault,
     input         m2_load_page_fault,
     input         m2_store_access_fault,
     input         m2_store_page_fault,
+    input         medeleg_exception_cause,
+    input         mideleg_interrupt_cause,
     input         MIE,
     input         MPIE,
     input         ret,
@@ -18,6 +21,7 @@ module trap_unit (
     input         SPP,
     input  [1:0]  MPP,
     input  [1:0]  privilege,
+    input  [3:0]  interrupt_cause,
     input  [3:0]  m2_fstcause,
     input  [31:0] m2_alu_out,
     input  [31:0] m2_instr,
@@ -54,18 +58,19 @@ assign _exceptioncause = m2_fstcause_valid ? m2_fstcause :
                          4'ha;
 
 wire [3:0] _interruptcause;
-assign _interruptcause = mip[11] && mie[11] && (mideleg[11] && privilege <= 2'h1 ? SIE : MIE) ? 4'hb :
-                         mip[3]  && mie[3]  && (mideleg[3]  && privilege <= 2'h1 ? SIE : MIE) ? 4'h3 :
-                         mip[7]  && mie[7]  && (mideleg[7]  && privilege <= 2'h1 ? SIE : MIE) ? 4'h7 :
-                         mip[9]  && mie[9]  && (mideleg[9]  && privilege <= 2'h1 ? SIE : MIE) ? 4'h9 :
-                         mip[1]  && mie[1]  && (mideleg[1]  && privilege <= 2'h1 ? SIE : MIE) ? 4'h1 :
-                         mip[5]  && mie[5]  && (mideleg[5]  && privilege <= 2'h1 ? SIE : MIE) ? 4'h5 :
-                         4'h0;
+assign _interruptcause = interrupt_cause_valid ? interrupt_cause : 4'h0;
 
 assign trap = _exceptioncause != 4'ha || _interruptcause != 4'h0;
-assign trap_type = nextprivilege == 2'h1;
+wire medeleg_exception_cause_true;
+assign medeleg_exception_cause_true = m2_fstcause_valid ? medeleg_exception_cause :
+                                        m2_load_page_fault ? medeleg[13] :
+                                        m2_load_access_fault ? medeleg[5] :
+                                        m2_store_page_fault ? medeleg[15] :
+                                        m2_store_access_fault ? medeleg[7] :
+                                        medeleg[10];
+assign trap_type = _exceptioncause == 4'ha ? (mideleg_interrupt_cause && privilege[1] == 1'h0) : (medeleg_exception_cause_true && privilege[1] == 1'h0);
 // 需保证 nextprivilege = 2'h0, 2'h1, 2'h3
-assign nextprivilege = trap ? (_exceptioncause == 4'ha ? (mideleg[{1'h0, _interruptcause}] && privilege <= 2'h1 ? 2'h1 : 2'h3) : (medeleg[{1'h0, _exceptioncause}] && privilege <= 2'h1 ? 2'h1 : 2'h3)) :
+assign nextprivilege = trap ? (_exceptioncause == 4'ha ? (mideleg_interrupt_cause && privilege <= 2'h1 ? 2'h1 : 2'h3) : (medeleg_exception_cause_true && privilege <= 2'h1 ? 2'h1 : 2'h3)) :
                        (ret_type ? {1'h0, SPP} : MPP);
 
 assign next_MIE = trap ? 1'h0 : MPIE;

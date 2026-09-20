@@ -15,6 +15,8 @@ module m1_stage (
     output     [31:0] request_addr_data,
     output     [31:0] request_data_data,
 
+    output     [3:0]  m1_fstcause,
+
     // 流水线参数
     input             m1_zf,
     input             m1_cf,
@@ -122,7 +124,6 @@ assign request_data_data = !m1_data_wen ? 32'h0 :
                            m1_mem_ctr == 3'h2 ? m_data2 :
                            32'h0;
 
-wire [3:0] m1_fstcause;
 assign m1_fstcause = m1_instr_page_fault ? 4'hc :
                      m1_instr_access_fault ? 4'h1 :
                      m1_instr_illegal_fault ? 4'h2 :
@@ -132,6 +133,7 @@ assign m1_fstcause = m1_instr_page_fault ? 4'hc :
                      m1_load_align_fault ? 4'h4 :
                      m1_store_align_fault ? 4'h6 :
                      4'ha;
+
 wire m1_fstcause_valid;
 assign m1_fstcause_valid = m1_instr_page_fault || m1_instr_access_fault || m1_instr_illegal_fault || m1_ebreak || m1_ecall || m1_instr_align_fault || m1_load_align_fault || m1_store_align_fault;
 
