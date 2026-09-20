@@ -4,6 +4,7 @@
 module ex2_stage (
     // 全局参数
     input             clk,
+    input             rst_n,
     input             flush,
     input             stall,
 
@@ -91,44 +92,43 @@ wire [31:0] ex2_reg_out_a_true;
 wire [31:0] ex2_reg_out_b_true;
 wire [31:0] ex2_raw_csr_in;
 
-initial begin
-    m1_zf = 1'h1;
-    m1_cf = 1'h0;
-    m1_sf = 1'h0;
-    m1_of = 1'h0;
-    m1_csr_wr = 1'h0;
-    m1_data_ren = 1'h0;
-    m1_data_wen = 1'h0;
-    m1_ebreak = 1'h0;
-    m1_ecall = 1'h0;
-    m1_instr_access_fault = 1'h0;
-    m1_instr_illegal_fault = 1'h0;
-    m1_instr_page_fault = 1'h0;
-    m1_is_csr = 1'h0;
-    m1_is_instr = 1'h0;
-    m1_predtaken = 1'h0;
-    m1_reg_wr = 1'h1;
-    m1_ret = 1'h0;
-    m1_ret_type = 1'h0;
-    m1_mem_ctr = 3'h0;
-    m1_reg_src = 3'h0;
-    m1_branch_ctr = 5'h0;
-    m1_rd = 5'h0;
-    m1_csr_rd = 12'h0;
-    m1_alu_out = 32'h0;
-    m1_csr_out = 32'h0;
-    m1_imm = 32'h0;
-    m1_instr = 32'h13;
-    m1_pc = 32'h0;
-    m1_pcplus4 = 32'h4;
-    m1_pcplusimm = 32'h0;
-    m1_raw_csr_in = 32'h0;
-    m1_raw_reg_in = 32'h0;
-    m1_reg_out_b = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        m1_zf <= 1'h1;
+        m1_cf <= 1'h0;
+        m1_sf <= 1'h0;
+        m1_of <= 1'h0;
+        m1_csr_wr <= 1'h0;
+        m1_data_ren <= 1'h0;
+        m1_data_wen <= 1'h0;
+        m1_ebreak <= 1'h0;
+        m1_ecall <= 1'h0;
+        m1_instr_access_fault <= 1'h0;
+        m1_instr_illegal_fault <= 1'h0;
+        m1_instr_page_fault <= 1'h0;
+        m1_is_csr <= 1'h0;
+        m1_is_instr <= 1'h0;
+        m1_predtaken <= 1'h0;
+        m1_reg_wr <= 1'h1;
+        m1_ret <= 1'h0;
+        m1_ret_type <= 1'h0;
+        m1_mem_ctr <= 3'h0;
+        m1_reg_src <= 3'h0;
+        m1_branch_ctr <= 5'h0;
+        m1_rd <= 5'h0;
+        m1_csr_rd <= 12'h0;
+        m1_alu_out <= 32'h0;
+        m1_csr_out <= 32'h0;
+        m1_imm <= 32'h0;
+        m1_instr <= 32'h13;
+        m1_pc <= 32'h0;
+        m1_pcplus4 <= 32'h4;
+        m1_pcplusimm <= 32'h0;
+        m1_raw_csr_in <= 32'h0;
+        m1_raw_reg_in <= 32'h0;
+        m1_reg_out_b <= 32'h0;
+    end
+    else if (flush) begin
         m1_zf <= 1'h0;
         m1_cf <= 1'h0;
         m1_sf <= 1'h0;

@@ -9,6 +9,7 @@
 //   3. empty / buffer_count<8 由“减法+比较”改为指针等值/位比较。
 module instr_buffer_unit (
     input         clk,
+    input         rst_n,
     input         flush,
     input         request_valid_instr,
     input         respond_fault_instr,
@@ -58,32 +59,6 @@ assign buffer_full8 = (buffer_write_pos[2:0] == buffer_read_pos[2:0]) &&
                       (buffer_write_pos[3]   != buffer_read_pos[3]);
 
 integer i;
-initial begin
-    for (i = 0; i < 8; i = i + 1) begin
-        pending_requests[i] = 32'h0;
-    end
-    for (i = 0; i < 8; i = i + 1) begin
-        pending_requests_plus4[i] = 32'h0;
-    end
-    pending_requests_read_pos = 4'h0;
-    pending_requests_write_pos = 4'h0;
-    trash_until_pos = 4'h0;
-    trash_active = 1'h0;
-    for (i = 0; i < 8; i = i + 1) begin
-        pc_buffer[i] = 32'h0;
-    end
-    for (i = 0; i < 8; i = i + 1) begin
-        pcplus4_buffer[i] = 32'h0;
-    end
-    for (i = 0; i < 8; i = i + 1) begin
-        instr_fault_buffer[i] = 1'h0;
-    end
-    for (i = 0; i < 8; i = i + 1) begin
-        instr_buffer[i] = 32'h0;
-    end
-    buffer_read_pos = 4'h0;
-    buffer_write_pos = 4'h0;
-end
 
 assign empty = buffer_write_pos == buffer_read_pos;
 assign full = buffer_count + pending_requests_count >= 4'h8;
@@ -114,33 +89,61 @@ assign buffer_write = respond_valid_instr && !trash_pending && !flush &&
         (!buffer_full8 || buffer_read);
 assign buffer_flush = flush;
 
-always @(posedge clk) begin
-    if (pending_requests_write) begin
-        pending_requests[pending_requests_write_pos[2:0]] <= request_addr_instr;
-        pending_requests_plus4[pending_requests_write_pos[2:0]] <= request_addr_instr_plus4;
-        pending_requests_write_pos <= pending_requests_write_pos + 4'h1;
-    end
-    if (pending_requests_read) begin
-        pending_requests_read_pos <= pending_requests_read_pos + 4'h1;
-    end
-    if (buffer_flush) begin
-        buffer_write_pos <= buffer_read_pos;
-        trash_until_pos <= pending_requests_write_pos;
-        trash_active <= 1'h1;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        for (i = 0; i < 8; i = i + 1) begin
+            pending_requests[i] <= 32'h0;
+        end
+        for (i = 0; i < 8; i = i + 1) begin
+            pending_requests_plus4[i] <= 32'h0;
+        end
+        pending_requests_read_pos <= 4'h0;
+        pending_requests_write_pos <= 4'h0;
+        trash_until_pos <= 4'h0;
+        trash_active <= 1'h0;
+        for (i = 0; i < 8; i = i + 1) begin
+            pc_buffer[i] <= 32'h0;
+        end
+        for (i = 0; i < 8; i = i + 1) begin
+            pcplus4_buffer[i] <= 32'h0;
+        end
+        for (i = 0; i < 8; i = i + 1) begin
+            instr_fault_buffer[i] <= 1'h0;
+        end
+        for (i = 0; i < 8; i = i + 1) begin
+            instr_buffer[i] <= 32'h0;
+        end
+        buffer_read_pos <= 4'h0;
+        buffer_write_pos <= 4'h0;
     end
     else begin
-        if (trash_active && pending_requests_read_pos == trash_until_pos) begin
-            trash_active <= 1'h0;
+        if (pending_requests_write) begin
+            pending_requests[pending_requests_write_pos[2:0]] <= request_addr_instr;
+            pending_requests_plus4[pending_requests_write_pos[2:0]] <= request_addr_instr_plus4;
+            pending_requests_write_pos <= pending_requests_write_pos + 4'h1;
         end
-        if (buffer_write) begin
-            instr_fault_buffer[buffer_write_pos[2:0]] <= respond_fault_instr;
-            instr_buffer[buffer_write_pos[2:0]] <= respond_data_instr;
-            pc_buffer[buffer_write_pos[2:0]] <= pending_requests[pending_requests_read_pos[2:0]];
-            pcplus4_buffer[buffer_write_pos[2:0]] <= pending_requests_plus4[pending_requests_read_pos[2:0]];
-            buffer_write_pos <= buffer_write_pos + 4'h1;
+        if (pending_requests_read) begin
+            pending_requests_read_pos <= pending_requests_read_pos + 4'h1;
         end
-        if (buffer_read) begin
-            buffer_read_pos <= buffer_read_pos + 4'h1;
+        if (buffer_flush) begin
+            buffer_write_pos <= buffer_read_pos;
+            trash_until_pos <= pending_requests_write_pos;
+            trash_active <= 1'h1;
+        end
+        else begin
+            if (trash_active && pending_requests_read_pos == trash_until_pos) begin
+                trash_active <= 1'h0;
+            end
+            if (buffer_write) begin
+                instr_fault_buffer[buffer_write_pos[2:0]] <= respond_fault_instr;
+                instr_buffer[buffer_write_pos[2:0]] <= respond_data_instr;
+                pc_buffer[buffer_write_pos[2:0]] <= pending_requests[pending_requests_read_pos[2:0]];
+                pcplus4_buffer[buffer_write_pos[2:0]] <= pending_requests_plus4[pending_requests_read_pos[2:0]];
+                buffer_write_pos <= buffer_write_pos + 4'h1;
+            end
+            if (buffer_read) begin
+                buffer_read_pos <= buffer_read_pos + 4'h1;
+            end
         end
     end
 end

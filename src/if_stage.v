@@ -3,6 +3,7 @@
 module if_stage (
     // 全局参数
     input         clk,
+    input         rst_n,
     input         flush,
     input         stall,
     input         actual_jump,
@@ -49,6 +50,7 @@ assign request_addr_instr = pc;
 
 pc_reg pc_reg (
     .clk         (clk),
+    .rst_n       (rst_n),
     .actual_jump (actual_jump),
     .stall       (stall),
     .ret         (ret),
@@ -68,6 +70,7 @@ pc_reg pc_reg (
 
 instr_buffer_unit instr_buffer_unit (
     .clk                     (clk),
+    .rst_n                   (rst_n),
     .flush                   (flush),
     .request_valid_instr     (request_valid_instr),
     .respond_fault_instr     (respond_fault_instr),

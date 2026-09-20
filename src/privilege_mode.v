@@ -3,18 +3,18 @@
 // 需保证 next_privilege = 2'h0, 2'h1, 2'h3
 module privilege_mode (
     input            clk,
+    input            rst_n,
     input            ret,
     input            trap,
     input      [1:0] nextprivilege,
     output reg [1:0] privilege
 );
 
-initial begin
-    privilege = 2'h3;
-end
-
-always @(posedge clk) begin
-    if (trap || ret) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        privilege <= 2'h3;
+    end
+    else if (trap || ret) begin
         privilege <= nextprivilege;
     end
 end

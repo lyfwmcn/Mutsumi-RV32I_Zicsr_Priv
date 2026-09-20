@@ -2,6 +2,7 @@
 
 module cpu (
     input         clk,
+    input         rst_n,
 
     input         external_interrupt_clear,
     input         external_interrupt_set,
@@ -238,6 +239,7 @@ wire [31:0] wb_reg_in;
 
 privilege_mode privilege_mode (
     .clk             (clk),
+    .rst_n (rst_n),
     .ret             (ret),
     .trap            (trap),
     .nextprivilege   (nextprivilege),
@@ -246,6 +248,7 @@ privilege_mode privilege_mode (
 
 csr_file csr_file (
     .clk                     (clk),
+    .rst_n (rst_n),
 
     .external_interrupt_clear(external_interrupt_clear),
     .external_interrupt_set  (external_interrupt_set),
@@ -292,6 +295,7 @@ csr_file csr_file (
 
 trap_csr_bypass trap_csr_bypass (
     .clk        (clk),
+    .rst_n (rst_n),
     .flush      (trap | ret | actual_jump),
     .stall      (mem_wait),
     .cur_MIE    (cur_MIE),
@@ -332,6 +336,7 @@ trap_csr_bypass trap_csr_bypass (
 
 reg_file reg_file (
     .clk      (clk),
+    .rst_n (rst_n),
     .reg_wr   (wb_reg_wr),
     .rd       (wb_rd),
     .rs1      (ex1_rs1),
@@ -343,6 +348,7 @@ reg_file reg_file (
 
 if_stage if_stage (
     .clk                  (clk),
+    .rst_n (rst_n),
     .flush                (trap | ret | actual_jump | (predtaken & !actual_jump & !reg_wait & !csr_wait & !mem_wait)),
     .stall                (reg_wait | csr_wait | mem_wait),
     .actual_jump          (actual_jump),
@@ -375,6 +381,7 @@ if_stage if_stage (
 
 id_stage id_stage (
     .clk                    (clk),
+    .rst_n (rst_n),
     .flush                  (trap | ret | actual_jump),
     .stall                  (reg_wait | csr_wait | mem_wait),
     .privilege              (privilege),
@@ -424,6 +431,7 @@ id_stage id_stage (
 
 ex1_stage ex1_stage (
     .clk                    (clk),
+    .rst_n (rst_n),
     .flush                  (trap | ret | actual_jump | ((reg_wait | csr_wait) & !mem_wait)),
     .stall                  (mem_wait),
     .csr_wait               (csr_wait),
@@ -524,6 +532,7 @@ ex1_stage ex1_stage (
 
 ex2_stage ex2_stage (
     .clk                    (clk),
+    .rst_n (rst_n),
     .flush                  (trap | ret | actual_jump),
     .stall                  (mem_wait),
 
@@ -599,6 +608,7 @@ ex2_stage ex2_stage (
 
 m1_stage m1_stage (
     .clk                   (clk),
+    .rst_n (rst_n),
     .flush                 (trap | ret | actual_jump),
     .stall                 (mem_wait),
     .privilege             (privilege),
@@ -673,6 +683,7 @@ m1_stage m1_stage (
 
 m2_stage m2_stage (
     .clk                   (clk),
+    .rst_n (rst_n),
     .flush                 (trap | mem_wait),
     .MIE                   (MIE),
     .MPIE                  (MPIE),

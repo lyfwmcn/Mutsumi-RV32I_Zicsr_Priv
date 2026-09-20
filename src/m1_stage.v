@@ -3,6 +3,7 @@
 module m1_stage (
     // 全局变量
     input             clk,
+    input             rst_n,
     input             flush,
     input             stall,
     input      [1:0]  privilege,
@@ -134,37 +135,36 @@ assign m1_fstcause = m1_instr_page_fault ? 4'hc :
 wire m1_fstcause_valid;
 assign m1_fstcause_valid = m1_instr_page_fault || m1_instr_access_fault || m1_instr_illegal_fault || m1_ebreak || m1_ecall || m1_instr_align_fault || m1_load_align_fault || m1_store_align_fault;
 
-initial begin
-    m2_actual_jump = 1'h0;
-    m2_csr_wr = 1'h0;
-    m2_data_ren = 1'h0;
-    m2_data_wen = 1'h0;
-    m2_is_csr = 1'h0;
-    m2_is_instr = 1'h0;
-    m2_reg_wr = 1'h1;
-    m2_ret = 1'h0;
-    m2_ret_type = 1'h0;
-    m2_fstcause_valid = 1'h0;
-    m2_mem_ctr = 3'h0;
-    m2_reg_src = 3'h0;
-    m2_fstcause = 4'h0;
-    m2_rd = 5'h0;
-    m2_csr_rd = 12'h0;
-    m2_alu_out = 32'h0;
-    m2_csr_in = 32'h0;
-    m2_csr_out = 32'h0;
-    m2_imm = 32'h0;
-    m2_instr = 32'h13;
-    m2_jump_addr = 32'h0;
-    m2_nextpc = 32'h4;
-    m2_pc = 32'h0;
-    m2_pcplus4 = 32'h4;
-    m2_pcplusimm = 32'h0;
-    m2_raw_reg_in = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        m2_actual_jump <= 1'h0;
+        m2_csr_wr <= 1'h0;
+        m2_data_ren <= 1'h0;
+        m2_data_wen <= 1'h0;
+        m2_is_csr <= 1'h0;
+        m2_is_instr <= 1'h0;
+        m2_reg_wr <= 1'h1;
+        m2_ret <= 1'h0;
+        m2_ret_type <= 1'h0;
+        m2_fstcause_valid <= 1'h0;
+        m2_mem_ctr <= 3'h0;
+        m2_reg_src <= 3'h0;
+        m2_fstcause <= 4'h0;
+        m2_rd <= 5'h0;
+        m2_csr_rd <= 12'h0;
+        m2_alu_out <= 32'h0;
+        m2_csr_in <= 32'h0;
+        m2_csr_out <= 32'h0;
+        m2_imm <= 32'h0;
+        m2_instr <= 32'h13;
+        m2_jump_addr <= 32'h0;
+        m2_nextpc <= 32'h4;
+        m2_pc <= 32'h0;
+        m2_pcplus4 <= 32'h4;
+        m2_pcplusimm <= 32'h0;
+        m2_raw_reg_in <= 32'h0;
+    end
+    else if (flush) begin
         m2_actual_jump <= 1'h0;
         m2_csr_wr <= 1'h0;
         m2_data_ren <= 1'h0;

@@ -15,6 +15,7 @@ module system_bus #(
     parameter UART_DIV = 25_000_000 / 115_200
 ) (
     input             clk,
+    input             rst_n,
     input             request_valid_data,
     input             request_valid_instr,
     input             request_write_data,
@@ -52,18 +53,19 @@ reg [31:0] request_addr_data_reg;
 reg [31:0] request_addr_instr_reg;
 reg [31:0] request_data_data_reg;
 
-initial begin
-    request_valid_data_reg = 1'h0;
-    request_valid_instr_reg = 1'h0;
-    request_write_data_reg = 1'h0;
-    request_en_data_reg = 4'h0;
-end
-
-always @(posedge clk) begin
-    request_valid_data_reg <= request_valid_data;
-    request_valid_instr_reg <= request_valid_instr;
-    request_write_data_reg <= request_write_data;
-    request_en_data_reg <= request_en_data;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        request_valid_data_reg <= 1'h0;
+        request_valid_instr_reg <= 1'h0;
+        request_write_data_reg <= 1'h0;
+        request_en_data_reg <= 4'h0;
+    end
+    else begin
+        request_valid_data_reg <= request_valid_data;
+        request_valid_instr_reg <= request_valid_instr;
+        request_write_data_reg <= request_write_data;
+        request_en_data_reg <= request_en_data;
+    end
 end
 
 // 地址/写数据寄存器不作异步复位：它们会被 EBR 吸收为内部地址/数据输入寄存器，
@@ -136,6 +138,7 @@ reg  [7:0] uart_byte;
 
 uart_tx #(.DIV(UART_DIV)) u_uart_tx (
     .clk  (clk),
+    .rst_n(rst_n),
     .start(uart_start),
     .data (uart_byte),
     .busy (uart_busy),
@@ -152,16 +155,6 @@ reg  [3:0]  uart_en_q;
 reg  [1:0]  uart_sel;
 reg         uart_done;
 
-initial begin
-    uart_state  = UART_IDLE;
-    uart_data_q = 32'h0;
-    uart_en_q   = 4'h0;
-    uart_sel    = 2'd0;
-    uart_done   = 1'b0;
-    uart_start  = 1'b0;
-    uart_byte   = 8'h0;
-end
-
 // 命中条件与 store 落盘一致：对齐、0x0~0xFFF 内、且是字 1023（字节 0xFFC~0xFFF）
 wire uart_hit = request_valid_data_reg && request_write_data_reg &&
                 request_addr_data_reg[1:0] == 2'h0 &&
@@ -170,7 +163,17 @@ wire uart_hit = request_valid_data_reg && request_write_data_reg &&
 // 还有字节没交给 UART → 压住本次响应
 wire uart_hold = uart_hit && (request_en_data_reg != 4'h0) && !uart_done;
 
-always @(posedge clk) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        uart_state  <= UART_IDLE;
+        uart_data_q <= 32'h0;
+        uart_en_q   <= 4'h0;
+        uart_sel    <= 2'd0;
+        uart_done   <= 1'b0;
+        uart_start  <= 1'b0;
+        uart_byte   <= 8'h0;
+    end
+    else begin
     uart_start <= 1'b0;                            // 单周期脉冲
     if (!request_valid_data_reg) begin
         uart_done <= 1'b0;                         // 请求撤销后才允许下一次
@@ -213,27 +216,31 @@ always @(posedge clk) begin
             end
         end
     endcase
-end
-
-initial begin
-    respond_fault_instr = 1'h0;
-    respond_valid_instr = 1'h0;
-    respond_data_instr = 32'h0;
-    respond_fault_data = 1'h0;
-    respond_valid_data = 1'h0;
-    respond_data_data = 32'h0;
-end
-
-always @(posedge clk) begin
-    respond_valid_instr <= respond_valid_instr_wire;
-    if (request_valid_instr_reg) begin
-        respond_fault_instr <= respond_fault_instr_wire;
-        respond_data_instr <= respond_data_instr_wire;
     end
 end
 
-always @(posedge clk) begin
-    if (request_valid_data_reg && !uart_hold) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        respond_valid_instr <= 1'h0;
+        respond_fault_instr <= 1'h0;
+        respond_data_instr <= 32'h0;
+    end
+    else begin
+        respond_valid_instr <= respond_valid_instr_wire;
+        if (request_valid_instr_reg) begin
+            respond_fault_instr <= respond_fault_instr_wire;
+            respond_data_instr <= respond_data_instr_wire;
+        end
+    end
+end
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        respond_fault_data <= 1'h0;
+        respond_valid_data <= 1'h0;
+        respond_data_data <= 32'h0;
+    end
+    else if (request_valid_data_reg && !uart_hold) begin
         respond_fault_data <= respond_fault_data_wire;
         respond_valid_data <= 1'h1;
         respond_data_data <= respond_data_data_wire;

@@ -3,6 +3,7 @@
 module tb;
 
 reg clk;
+reg rst_n;
 
 wire        request_valid_data;
 wire        request_valid_instr;
@@ -26,6 +27,7 @@ reg timer_interrupt_set;
 
 cpu cpu (
     .clk                     (clk),
+    .rst_n                   (rst_n),
     .external_interrupt_clear(external_interrupt_clear),
     .external_interrupt_set  (external_interrupt_set),
     .timer_interrupt_clear   (timer_interrupt_clear),
@@ -66,7 +68,10 @@ system_bus system_bus (
 );
 
 initial begin
+    rst_n = 1'h0;
     clk = 0;
+    #200
+    rst_n = 1'h1;
     forever #5 clk = ~clk;
 end
 

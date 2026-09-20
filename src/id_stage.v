@@ -4,6 +4,7 @@
 module id_stage (
     // 全局参数
     input             clk,
+    input             rst_n,
     input             flush,
     input             stall,
     input      [1:0]  privilege,
@@ -81,43 +82,42 @@ wire [11:0] id_csr_rd;
 wire [31:0] id_imm;
 wire [31:0] id_pcplusimm;
 
-initial begin
-    ex1_alu_src_a = 1'h0;
-    ex1_csr_wr = 1'h0;
-    ex1_data_ren = 1'h0;
-    ex1_data_wen = 1'h0;
-    ex1_ebreak = 1'h0;
-    ex1_ecall = 1'h0;
-    ex1_instr_access_fault = 1'h0;
-    ex1_instr_illegal_fault = 1'h0;
-    ex1_instr_page_fault = 1'h0;
-    ex1_is_csr = 1'h0;
-    ex1_is_instr = 1'h0;
-    ex1_predtaken = 1'h0;
-    ex1_reg_out_a_used = 1'h1;
-    ex1_reg_out_b_used = 1'h0;
-    ex1_reg_wr = 1'h1;
-    ex1_ret = 1'h0;
-    ex1_ret_type = 1'h0;
-    ex1_alu_src_b = 2'h1;
-    ex1_csr_src = 2'h0;
-    ex1_mem_ctr = 3'h0;
-    ex1_reg_src = 3'h0;
-    ex1_branch_ctr = 5'h0;
-    ex1_rd = 5'h0;
-    ex1_rs1 = 5'h0;
-    ex1_rs2 = 5'h0;
-    ex1_alu_ctr = 6'h0;
-    ex1_csr_rd = 12'h0;
-    ex1_imm = 32'h0;
-    ex1_instr = 32'h13;
-    ex1_pc = 32'h0;
-    ex1_pcplus4 = 32'h4;
-    ex1_pcplusimm = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        ex1_alu_src_a <= 1'h0;
+        ex1_csr_wr <= 1'h0;
+        ex1_data_ren <= 1'h0;
+        ex1_data_wen <= 1'h0;
+        ex1_ebreak <= 1'h0;
+        ex1_ecall <= 1'h0;
+        ex1_instr_access_fault <= 1'h0;
+        ex1_instr_illegal_fault <= 1'h0;
+        ex1_instr_page_fault <= 1'h0;
+        ex1_is_csr <= 1'h0;
+        ex1_is_instr <= 1'h0;
+        ex1_predtaken <= 1'h0;
+        ex1_reg_out_a_used <= 1'h1;
+        ex1_reg_out_b_used <= 1'h0;
+        ex1_reg_wr <= 1'h1;
+        ex1_ret <= 1'h0;
+        ex1_ret_type <= 1'h0;
+        ex1_alu_src_b <= 2'h1;
+        ex1_csr_src <= 2'h0;
+        ex1_mem_ctr <= 3'h0;
+        ex1_reg_src <= 3'h0;
+        ex1_branch_ctr <= 5'h0;
+        ex1_rd <= 5'h0;
+        ex1_rs1 <= 5'h0;
+        ex1_rs2 <= 5'h0;
+        ex1_alu_ctr <= 6'h0;
+        ex1_csr_rd <= 12'h0;
+        ex1_imm <= 32'h0;
+        ex1_instr <= 32'h13;
+        ex1_pc <= 32'h0;
+        ex1_pcplus4 <= 32'h4;
+        ex1_pcplusimm <= 32'h0;
+    end
+    else if (flush) begin
         ex1_alu_src_a <= 1'h0;
         ex1_csr_wr <= 1'h0;
         ex1_data_ren <= 1'h0;

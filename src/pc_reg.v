@@ -2,6 +2,7 @@
 
 module pc_reg (
     input             clk,
+    input             rst_n,
     input             actual_jump,
     input             stall,
     input             ret,
@@ -19,18 +20,19 @@ module pc_reg (
     output     [31:0] pcplus4
 );
 
-initial begin
-    pc = 32'h0;
-end
-
 assign pcplus4 = pc + 32'h4;
 
-always @(posedge clk) begin
-    pc <= trap ? (trap_type ? {stvec[31:2], 2'h0} : {mtvec[31:2], 2'h0}) : // 目前只支持直接跳转模式
-          ret ? (ret_type ? {sepc[31:2], 2'h0} : {mepc[31:2], 2'h0}) :
-          actual_jump ? {m2_jump_addr[31:2], 2'h0} :
-          predtaken? {id_jump_addr[31:2], 2'h0} :
-          stall ? pc : pcplus4;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        pc <= 32'h0;
+    end
+    else begin
+        pc <= trap ? (trap_type ? {stvec[31:2], 2'h0} : {mtvec[31:2], 2'h0}) : // 目前只支持直接跳转模式
+            ret ? (ret_type ? {sepc[31:2], 2'h0} : {mepc[31:2], 2'h0}) :
+            actual_jump ? {m2_jump_addr[31:2], 2'h0} :
+            predtaken? {id_jump_addr[31:2], 2'h0} :
+            stall ? pc : pcplus4;
+    end
 end
 
 endmodule

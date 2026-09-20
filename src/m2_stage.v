@@ -4,6 +4,7 @@
 module m2_stage (
     // 全局参数
     input             clk,
+    input             rst_n,
     input             flush,
     input             MIE,
     input             MPIE,
@@ -119,26 +120,25 @@ assign m2_mem = !respond_valid_data || respond_fault_data ? 32'h0 :
                m2_mem_ctr == 3'h5 ? Data16U[m2_alu_out[1]] :
                32'h0;
 
-initial begin
-    wb_csr_wr = 1'h0;
-    wb_is_csr = 1'h0;
-    wb_is_instr = 1'h0;
-    wb_reg_wr = 1'h1;
-    wb_reg_src = 3'h0;
-    wb_rd = 5'h0;
-    wb_csr_rd = 12'h0;
-    wb_alu_out = 32'h0;
-    wb_csr_in = 32'h0;
-    wb_csr_out = 32'h0;
-    wb_imm = 32'h0;
-    wb_mem = 32'h0;
-    wb_nextpc = 32'h4;
-    wb_pcplus4 = 32'h4;
-    wb_pcplusimm = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        wb_csr_wr <= 1'h0;
+        wb_is_csr <= 1'h0;
+        wb_is_instr <= 1'h0;
+        wb_reg_wr <= 1'h1;
+        wb_reg_src <= 3'h0;
+        wb_rd <= 5'h0;
+        wb_csr_rd <= 12'h0;
+        wb_alu_out <= 32'h0;
+        wb_csr_in <= 32'h0;
+        wb_csr_out <= 32'h0;
+        wb_imm <= 32'h0;
+        wb_mem <= 32'h0;
+        wb_nextpc <= 32'h4;
+        wb_pcplus4 <= 32'h4;
+        wb_pcplusimm <= 32'h0;
+    end
+    else if (flush) begin
         wb_csr_wr <= 1'h0;
         wb_is_csr <= 1'h0;
         wb_is_instr <= 1'h0;

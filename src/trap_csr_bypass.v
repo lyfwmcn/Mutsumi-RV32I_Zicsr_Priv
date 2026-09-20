@@ -4,6 +4,7 @@
 // 需保证 wb_csr_in 符合格式
 module trap_csr_bypass (
     input             clk,
+    input             rst_n,
     input             flush,
     input             stall,
     input             cur_MIE,
@@ -42,25 +43,24 @@ module trap_csr_bypass (
     output reg [31:0] stvec
 );
 
-initial begin
-    MIE = 1'h0;
-    MPIE = 1'h0;
-    SIE = 1'h0;
-    SPIE = 1'h0;
-    SPP = 1'h0;
-    MPP = 2'h0;
-    medeleg = 32'h0;
-    mepc = 32'h0;
-    mideleg = 32'h0;
-    mie = 32'h0;
-    mip = 32'h0;
-    mtvec = 32'h0;
-    sepc = 32'h0;
-    stvec = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        MIE <= 1'h0;
+        MPIE <= 1'h0;
+        SIE <= 1'h0;
+        SPIE <= 1'h0;
+        SPP <= 1'h0;
+        MPP <= 2'h0;
+        medeleg <= 32'h0;
+        mepc <= 32'h0;
+        mideleg <= 32'h0;
+        mie <= 32'h0;
+        mip <= 32'h0;
+        mtvec <= 32'h0;
+        sepc <= 32'h0;
+        stvec <= 32'h0;
+    end
+    else if (flush) begin
         MIE <= 1'h0;
         MPIE <= 1'h0;
         SIE <= 1'h0;

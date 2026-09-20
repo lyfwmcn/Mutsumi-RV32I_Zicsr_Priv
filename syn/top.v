@@ -11,6 +11,14 @@ module top (
     output uart_tx
 );
 
+// ---- 上电复位：配置完成后保持复位若干周期再释放（低电平有效）----
+reg [7:0] rst_cnt = 8'h00;
+always @(posedge clk) begin
+    if (rst_cnt != 8'hFF)
+        rst_cnt <= rst_cnt + 8'h1;
+end
+wire rst_n = (rst_cnt == 8'hFF);
+
 // ---- CPU <-> system_bus 总线 ----
 wire        request_valid_data;
 wire        request_valid_instr;
@@ -29,6 +37,7 @@ wire [31:0] respond_data_instr;
 
 cpu cpu (
     .clk                     (clk),
+    .rst_n                   (rst_n),
     // 板上没有中断源，恒 0
     .external_interrupt_clear(1'b0),
     .external_interrupt_set  (1'b0),
@@ -53,6 +62,7 @@ cpu cpu (
 
 system_bus system_bus (
     .clk                (clk),
+    .rst_n              (rst_n),
     .request_valid_data (request_valid_data),
     .request_valid_instr(request_valid_instr),
     .request_write_data (request_write_data),

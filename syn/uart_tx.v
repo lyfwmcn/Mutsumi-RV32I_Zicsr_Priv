@@ -7,6 +7,7 @@ module uart_tx #(
     parameter DIV = 25_000_000 / 115_200   // 每 bit 的时钟数 (217)
 ) (
     input clk,
+    input rst_n,
     input start,
     input [7:0] data,
     output reg busy,
@@ -21,17 +22,16 @@ reg [1:0] state;
 reg [3:0] bits;     // 已发出的数据位数 0..8，之后为停止位阶段
 reg [7:0] sh;
 
-initial begin
-    state = IDLE;
-    tx    = 1'b1;
-    busy  = 1'b0;
-    bits  = 4'd0;
-    sh    = 8'h0;
-    cnt   = 32'd0;
-end
-
-always @(posedge clk) begin
-    case (state)
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        state <= IDLE;
+        tx    <= 1'b1;
+        busy  <= 1'b0;
+        bits  <= 4'd0;
+        sh    <= 8'h0;
+        cnt   <= 32'd0;
+    end
+    else case (state)
         IDLE: begin
             busy <= 1'b0;
             tx   <= 1'b1;

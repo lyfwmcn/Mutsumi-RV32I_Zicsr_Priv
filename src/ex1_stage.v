@@ -4,6 +4,7 @@
 module ex1_stage (
     // 全局参数
     input             clk,
+    input             rst_n,
     input             flush,
     input             stall,
     output            csr_wait,
@@ -114,46 +115,45 @@ wire [31:0] ex1_reg_out_b_true;
 wire [31:0] ex1_alu_in_a;
 wire [31:0] ex1_alu_in_b;
 
-initial begin
-    ex2_aluinausem1 = 1'h0;
-    ex2_aluinbusem1 = 1'h0;
-    ex2_csr_wr = 1'h0;
-    ex2_data_ren = 1'h0;
-    ex2_data_wen = 1'h0;
-    ex2_ebreak = 1'h0;
-    ex2_ecall = 1'h0;
-    ex2_instr_access_fault = 1'h0;
-    ex2_instr_illegal_fault = 1'h0;
-    ex2_instr_page_fault = 1'h0;
-    ex2_is_csr = 1'h0;
-    ex2_is_instr = 1'h0;
-    ex2_predtaken = 1'h0;
-    ex2_reg_wr = 1'h1;
-    ex2_ret = 1'h0;
-    ex2_ret_type = 1'h0;
-    ex2_rs1usem1 = 1'h0;
-    ex2_rs2usem1 = 1'h0;
-    ex2_csr_src = 2'h0;
-    ex2_mem_ctr = 3'h0;
-    ex2_reg_src = 3'h0;
-    ex2_branch_ctr = 5'h0;
-    ex2_rd = 5'h0;
-    ex2_alu_ctr = 6'h0;
-    ex2_csr_rd = 12'h0;
-    ex2_alu_in_a = 32'h0;
-    ex2_alu_in_b = 32'h0;
-    ex2_csr_out = 32'h0;
-    ex2_imm = 32'h0;
-    ex2_instr = 32'h13;
-    ex2_pc = 32'h0;
-    ex2_pcplus4 = 32'h4;
-    ex2_pcplusimm = 32'h0;
-    ex2_reg_out_a = 32'h0;
-    ex2_reg_out_b = 32'h0;
-end
-
-always @(posedge clk) begin
-    if (flush) begin
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        ex2_aluinausem1 <= 1'h0;
+        ex2_aluinbusem1 <= 1'h0;
+        ex2_csr_wr <= 1'h0;
+        ex2_data_ren <= 1'h0;
+        ex2_data_wen <= 1'h0;
+        ex2_ebreak <= 1'h0;
+        ex2_ecall <= 1'h0;
+        ex2_instr_access_fault <= 1'h0;
+        ex2_instr_illegal_fault <= 1'h0;
+        ex2_instr_page_fault <= 1'h0;
+        ex2_is_csr <= 1'h0;
+        ex2_is_instr <= 1'h0;
+        ex2_predtaken <= 1'h0;
+        ex2_reg_wr <= 1'h1;
+        ex2_ret <= 1'h0;
+        ex2_ret_type <= 1'h0;
+        ex2_rs1usem1 <= 1'h0;
+        ex2_rs2usem1 <= 1'h0;
+        ex2_csr_src <= 2'h0;
+        ex2_mem_ctr <= 3'h0;
+        ex2_reg_src <= 3'h0;
+        ex2_branch_ctr <= 5'h0;
+        ex2_rd <= 5'h0;
+        ex2_alu_ctr <= 6'h0;
+        ex2_csr_rd <= 12'h0;
+        ex2_alu_in_a <= 32'h0;
+        ex2_alu_in_b <= 32'h0;
+        ex2_csr_out <= 32'h0;
+        ex2_imm <= 32'h0;
+        ex2_instr <= 32'h13;
+        ex2_pc <= 32'h0;
+        ex2_pcplus4 <= 32'h4;
+        ex2_pcplusimm <= 32'h0;
+        ex2_reg_out_a <= 32'h0;
+        ex2_reg_out_b <= 32'h0;
+    end
+    else if (flush) begin
         ex2_aluinausem1 <= 1'h0;
         ex2_aluinbusem1 <= 1'h0;
         ex2_csr_wr <= 1'h0;

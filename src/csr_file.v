@@ -5,6 +5,7 @@
 // 需保证 next_MPP, next_mcause, next_mepc, next_mtval 符合格式
 module csr_file (
     input             clk,
+    input             rst_n,
 
     input             external_interrupt_clear,
     input             external_interrupt_set,
@@ -54,34 +55,35 @@ reg ec0, ec1, ec2;
 reg ts0, ts1, ts2;
 reg tc0, tc1, tc2;
 
-initial begin
-    es0 = 1'h0;
-    es1 = 1'h0;
-    es2 = 1'h0;
-    ec0 = 1'h0;
-    ec1 = 1'h0;
-    ec2 = 1'h0;
-    ts0 = 1'h0;
-    ts1 = 1'h0;
-    ts2 = 1'h0;
-    tc0 = 1'h0;
-    tc1 = 1'h0;
-    tc2 = 1'h0;
-end
-
-always @(posedge clk) begin
-    es0 <= external_interrupt_set;
-    es1 <= es0;
-    es2 <= es1;
-    ec0 <= external_interrupt_clear;
-    ec1 <= ec0;
-    ec2 <= ec1;
-    ts0 <= timer_interrupt_set;
-    ts1 <= ts0;
-    ts2 <= ts1;
-    tc0 <= timer_interrupt_clear;
-    tc1 <= tc0;
-    tc2 <= tc1;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        es0 <= 1'h0;
+        es1 <= 1'h0;
+        es2 <= 1'h0;
+        ec0 <= 1'h0;
+        ec1 <= 1'h0;
+        ec2 <= 1'h0;
+        ts0 <= 1'h0;
+        ts1 <= 1'h0;
+        ts2 <= 1'h0;
+        tc0 <= 1'h0;
+        tc1 <= 1'h0;
+        tc2 <= 1'h0;
+    end
+    else begin
+        es0 <= external_interrupt_set;
+        es1 <= es0;
+        es2 <= es1;
+        ec0 <= external_interrupt_clear;
+        ec1 <= ec0;
+        ec2 <= ec1;
+        ts0 <= timer_interrupt_set;
+        ts1 <= ts0;
+        ts2 <= ts1;
+        tc0 <= timer_interrupt_clear;
+        tc1 <= tc0;
+        tc2 <= tc1;
+    end
 end
 
 reg [31:0] stvec;
@@ -106,31 +108,6 @@ reg [31:0] minstret;
 reg [31:0] mcycleh;
 reg [31:0] minstreth;
 reg [31:0] mhartid;
-
-initial begin
-    stvec = 32'h0;
-    sscratch = 32'h0;
-    sepc = 32'h0;
-    scause = 32'h0;
-    stval = 32'h0;
-    satp = 32'h0;
-    mstatus = 32'h0;
-    misa = 32'h40000100;
-    medeleg = 32'h0;
-    mideleg = 32'h0;
-    mie = 32'h0;
-    mtvec = 32'h0;
-    mscratch = 32'h0;
-    mepc = 32'h0;
-    mcause = 32'h0;
-    mtval = 32'h0;
-    mip = 32'h0;
-    mcycle = 32'h0;
-    minstret = 32'h0;
-    mcycleh = 32'h0;
-    minstreth = 32'h0;
-    mhartid = 32'h0;
-end
 
 always @(*) begin
     case (csr_rs)
@@ -178,75 +155,101 @@ assign cur_mtvec = mtvec;
 assign cur_sepc = sepc;
 assign cur_stvec = stvec;
 
-always @(posedge clk) begin
-    {mcycleh, mcycle} <= {mcycleh, mcycle} + 64'h1;
-    if (wb_is_instr == 1'h1) begin
-        {minstreth, minstret} <= {minstreth, minstret} + 64'h1;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        stvec <= 32'h0;
+        sscratch <= 32'h0;
+        sepc <= 32'h0;
+        scause <= 32'h0;
+        stval <= 32'h0;
+        satp <= 32'h0;
+        mstatus <= 32'h0;
+        misa <= 32'h40000100;
+        medeleg <= 32'h0;
+        mideleg <= 32'h0;
+        mie <= 32'h0;
+        mtvec <= 32'h0;
+        mscratch <= 32'h0;
+        mepc <= 32'h0;
+        mcause <= 32'h0;
+        mtval <= 32'h0;
+        mip <= 32'h0;
+        mcycle <= 32'h0;
+        minstret <= 32'h0;
+        mcycleh <= 32'h0;
+        minstreth <= 32'h0;
+        mhartid <= 32'h0;
     end
-    if (ec1 ^ ec2) begin
-        mip[11] <= 1'h0;
-    end
-    if (es1 ^ es2) begin
-        mip[11] <= 1'h1;
-    end
-    if (tc1 ^ tc2) begin
-        mip[7] <= 1'h0;
-    end
-    if (ts1 ^ ts2) begin
-        mip[7] <= 1'h1;
-    end
-    if (csr_wr == 1'h1) begin
-        case (csr_rd)
-            12'h100: {mstatus[19:18], mstatus[8], mstatus[5], mstatus[1]} <= {csr_in[19:18], csr_in[8], csr_in[5], csr_in[1]};
-            12'h104: {mie[9], mie[5], mie[1]} <= {csr_in[9], csr_in[5], csr_in[1]};
-            12'h105: stvec <= csr_in;
-            12'h140: sscratch <= csr_in;
-            12'h141: sepc <= csr_in;
-            12'h142: scause <= csr_in;
-            12'h143: stval <= csr_in;
-            12'h144: mip[1] <= csr_in[1];
-            12'h180: satp <= csr_in;
-            12'h300: mstatus <= csr_in;
-            12'h302: medeleg <= csr_in;
-            12'h303: mideleg <= csr_in;
-            12'h304: mie <= csr_in;
-            12'h305: mtvec <= csr_in;
-            12'h340: mscratch <= csr_in;
-            12'h341: mepc <= csr_in;
-            12'h342: mcause <= csr_in;
-            12'h343: mtval <= csr_in;
-            12'h344: {mip[3], mip[1]} <= {csr_in[3], csr_in[1]};
-            default: ;
-        endcase
-    end
-    if (ret == 1'h1) begin
-        if (ret_type == 1'h0) begin
-            mstatus[3] <= next_MIE;
-            mstatus[7] <= next_MPIE;
-            mstatus[12:11] <= next_MPP;
+    else begin
+        {mcycleh, mcycle} <= {mcycleh, mcycle} + 64'h1;
+        if (wb_is_instr == 1'h1) begin
+            {minstreth, minstret} <= {minstreth, minstret} + 64'h1;
         end
-        else begin
-            mstatus[1] <= next_SIE;
-            mstatus[5] <= next_SPIE;
-            mstatus[8] <= next_SPP;
+        if (ec1 ^ ec2) begin
+            mip[11] <= 1'h0;
         end
-    end
-    if (trap == 1'h1) begin
-        if (trap_type == 1'h0) begin
-            mstatus[3] <= next_MIE;
-            mstatus[7] <= next_MPIE;
-            mstatus[12:11] <= next_MPP;
-            mcause <= next_mcause;
-            mepc <= next_mepc;
-            mtval <= next_mtval;
+        if (es1 ^ es2) begin
+            mip[11] <= 1'h1;
         end
-        else begin
-            mstatus[1] <= next_SIE;
-            mstatus[5] <= next_SPIE;
-            mstatus[8] <= next_SPP;
-            scause <= next_scause;
-            sepc <= next_sepc;
-            stval <= next_stval;
+        if (tc1 ^ tc2) begin
+            mip[7] <= 1'h0;
+        end
+        if (ts1 ^ ts2) begin
+            mip[7] <= 1'h1;
+        end
+        if (csr_wr == 1'h1) begin
+            case (csr_rd)
+                12'h100: {mstatus[19:18], mstatus[8], mstatus[5], mstatus[1]} <= {csr_in[19:18], csr_in[8], csr_in[5], csr_in[1]};
+                12'h104: {mie[9], mie[5], mie[1]} <= {csr_in[9], csr_in[5], csr_in[1]};
+                12'h105: stvec <= csr_in;
+                12'h140: sscratch <= csr_in;
+                12'h141: sepc <= csr_in;
+                12'h142: scause <= csr_in;
+                12'h143: stval <= csr_in;
+                12'h144: mip[1] <= csr_in[1];
+                12'h180: satp <= csr_in;
+                12'h300: mstatus <= csr_in;
+                12'h302: medeleg <= csr_in;
+                12'h303: mideleg <= csr_in;
+                12'h304: mie <= csr_in;
+                12'h305: mtvec <= csr_in;
+                12'h340: mscratch <= csr_in;
+                12'h341: mepc <= csr_in;
+                12'h342: mcause <= csr_in;
+                12'h343: mtval <= csr_in;
+                12'h344: {mip[3], mip[1]} <= {csr_in[3], csr_in[1]};
+                default: ;
+            endcase
+        end
+        if (ret == 1'h1) begin
+            if (ret_type == 1'h0) begin
+                mstatus[3] <= next_MIE;
+                mstatus[7] <= next_MPIE;
+                mstatus[12:11] <= next_MPP;
+            end
+            else begin
+                mstatus[1] <= next_SIE;
+                mstatus[5] <= next_SPIE;
+                mstatus[8] <= next_SPP;
+            end
+        end
+        if (trap == 1'h1) begin
+            if (trap_type == 1'h0) begin
+                mstatus[3] <= next_MIE;
+                mstatus[7] <= next_MPIE;
+                mstatus[12:11] <= next_MPP;
+                mcause <= next_mcause;
+                mepc <= next_mepc;
+                mtval <= next_mtval;
+            end
+            else begin
+                mstatus[1] <= next_SIE;
+                mstatus[5] <= next_SPIE;
+                mstatus[8] <= next_SPP;
+                scause <= next_scause;
+                sepc <= next_sepc;
+                stval <= next_stval;
+            end
         end
     end
 end
