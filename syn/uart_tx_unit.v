@@ -1,6 +1,6 @@
 `timescale 1ns / 1ns
 
-module uart_tx #(
+module uart_tx_unit #(
     parameter DIV = 25_000_000 / 115_200
 ) (
     input        clk,
