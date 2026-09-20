@@ -84,7 +84,7 @@ $(SYN): $(CONFIG) | $(BUILD_DIR)
 	$(ECPPACK) --input $< --bit $@
 
 $(CONFIG): $(JSON) $(LPF) | $(BUILD_DIR)
-	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(JSON) --textcfg $@ --lpf $(LPF) --freq 65
+	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(JSON) --textcfg $@ --lpf $(LPF) --freq 25
 
 $(JSON): $(SYNSRCS) $(SYNMEM0) $(SYNMEM1) | $(BUILD_DIR)
 	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $(JSON)"

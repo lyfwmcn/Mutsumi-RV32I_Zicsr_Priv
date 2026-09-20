@@ -12,12 +12,12 @@ module top (
 );
 
 // ---- 上电复位：配置完成后保持复位若干周期再释放（低电平有效）----
-reg [7:0] rst_cnt = 8'h00;
+reg [3:0] rst_cnt = 4'hf;
 always @(posedge clk) begin
-    if (rst_cnt != 8'hFF)
-        rst_cnt <= rst_cnt + 8'h1;
+    if (rst_cnt != 4'h0)
+        rst_cnt <= rst_cnt - 4'h1;
 end
-wire rst_n = (rst_cnt == 8'hFF);
+wire rst_n = (rst_cnt == 4'h0);
 
 // ---- CPU <-> system_bus 总线 ----
 wire        request_valid_data;
@@ -38,7 +38,7 @@ wire [31:0] respond_data_instr;
 cpu cpu (
     .clk                     (clk),
     .rst_n                   (rst_n),
-    // 板上没有中断源，恒 0
+
     .external_interrupt_clear(1'b0),
     .external_interrupt_set  (1'b0),
     .timer_interrupt_clear   (1'b0),
@@ -82,8 +82,8 @@ system_bus system_bus (
 );
 
 // 三个 LED 先用总线活动指示（调试用）
-assign led_r = request_valid_instr;
-assign led_g = request_valid_data;
-assign led_b = request_write_data;
+assign led_r = 1'h1;
+assign led_g = 1'h0;
+assign led_b = 1'h1;
 
 endmodule

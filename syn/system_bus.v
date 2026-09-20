@@ -162,6 +162,12 @@ wire uart_hit = request_valid_data_reg && request_write_data_reg &&
                 request_addr_data_reg[11:2] == 10'h3FF;
 // 还有字节没交给 UART → 压住本次响应
 wire uart_hold = uart_hit && (request_en_data_reg != 4'h0) && !uart_done;
+// The CPU may replace one completed store with the next store without
+// dropping request_valid_data for a full cycle.  Treat a changed payload or
+// byte-enable mask as a new UART transaction in that case.
+wire uart_new_request = uart_hit && uart_done &&
+                        ((request_data_data_reg != uart_data_q) ||
+                         (request_en_data_reg != uart_en_q));
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
@@ -180,10 +186,11 @@ always @(posedge clk or negedge rst_n) begin
     end
     case (uart_state)
         UART_IDLE: begin
-            if (uart_hold) begin
+            if (uart_hold || uart_new_request) begin
                 uart_data_q <= request_data_data_reg;
                 uart_en_q   <= request_en_data_reg;
                 uart_sel    <= 2'd0;
+                uart_done   <= 1'b0;
                 uart_state  <= UART_SEND;
             end
         end
@@ -204,7 +211,7 @@ always @(posedge clk or negedge rst_n) begin
             end
         end
         default: begin                             // UART_WAIT
-            if (uart_busy) begin                   // 已开始发送 → 下一个字节
+            if (!uart_busy) begin                  // 发送完成 → 下一个字节
                 if (uart_sel == 2'd3) begin
                     uart_state <= UART_IDLE;
                     uart_done  <= 1'b1;
@@ -240,7 +247,10 @@ always @(posedge clk or negedge rst_n) begin
         respond_valid_data <= 1'h0;
         respond_data_data <= 32'h0;
     end
-    else if (request_valid_data_reg && !uart_hold) begin
+    // A UART store may finish after the CPU withdraws its request.  The
+    // completion flag must still generate the response pulse, otherwise the
+    // pipeline can stop after the first transmitted byte.
+    else if ((request_valid_data_reg && !uart_hold) || uart_done) begin
         respond_fault_data <= respond_fault_data_wire;
         respond_valid_data <= 1'h1;
         respond_data_data <= respond_data_data_wire;
