@@ -163,6 +163,22 @@ verilator --binary --timing -Wno-lint -Wno-fatal -Wno-WIDTH -Wno-UNUSED -Wno-UND
 | `opencode/tb/tb_sdram_phy.v` | sdram_ctr + PHY + 模型 | 17/17 |
 | `opencode/tb/tb_rate.v` | I 侧连取节奏 | 24 条 890 ns（38.7 ns/条） |
 | `opencode/tb/tb_lb.v` | 串行 64 次 lbu | bad=0 |
+| `tests/riscv-tests/run_rv32ui.py` | riscv-tests `rv32ui-p-*` | 42/42 |
+
+### riscv-tests rv32ui
+
+```bash
+git clone --recursive https://github.com/riscv-software-src/riscv-tests.git /tmp/riscv-tests
+export RISCV_TESTS=/tmp/riscv-tests
+python3 tests/riscv-tests/run_rv32ui.py
+```
+
+测试镜像链接在 `0x10000`，地址 0 放 `j 0x10000`，`tohost` 在 `0x02000000`
+由 TB 锁存。核本身对非对齐 load/store 触发异常；`ma_data` 由
+`tests/riscv-tests/env/p/misalign.S` 的 `mtvec_handler` 逐字节软件模拟。
+`rv32ui-v-*` 有 WIP 环境（`opencode/riscv-tests-v/`），修复 `satp` flush glitch 和
+`d_save_set_d` 后 41/42 通过；仅 `ma_data` 仍未通过（S 模式非对齐模拟 WIP）。
+`rv32um/ua/uc/mi/si` 尚未接入。
 
 ### 上板测试
 
@@ -202,7 +218,15 @@ nextpnr 日志里有**两个** `Max frequency`：第一个是布局后估计（�
 - **没有 PMP**：`src/core/csr_file.v` 里没有 `pmpcfg*`/`pmpaddr*`（`docs/RV32I_Zicsr_Ref.md`
   里写了编码规则但没实现）。S/U 模式只能靠 Sv32 的 PTE 权限隔离，M 模式固件保护不了自己。
 - **PMA 只有 2 位**：没有"不可缓存窗口"，DMA/帧缓冲会和 cache 冲突；也没有 W/X/atomic 属性。
+- **Sv32 权限只实现基本 U 位检查**：`mstatus.SUM` / `MXR` / `MPRV` 未参与判断。
+- `trap_csr_bypass` 的 `flush` 分支现在回落到 `cur_*`；之前清 0 会让 `sret` 后第一笔
+  取指抓到 `satp=0`，按 bare 地址翻译并污染 I 侧。
+- 硬件补 A/D 的 `d_save_set_d` 之前从未置 1，`d_set_d` 永远锁存 0，store 的 D 位
+  置不上；已修。`rv32ui-v` 现在 41/42，仅 `ma_data` 的 S 模式非对齐模拟还没过
+  （WIP：`opencode/riscv-tests-v/`）。
 - **没有 A 扩展**（AMO / LR-SC）。
+- **没有硬件非对齐 load/store**：触发异常；`rv32ui` 的 `ma_data` 用测试环境
+  `mtvec_handler` 软件模拟通过。
 - **ROM 只有 4 KB**：EBR 还剩 16 个 DP16KD（≈36 KB），再大就得走 SPI flash 加载。
 - **运行中 PLL 失锁不会复位**：`rst_gen` 的 `always` 只在 `!rst_n` 时工作。
 - `opencode/tb/` 里 `runner.py` / `run_unit.py` / `arb_build/` 是早期批量实验的归档，引用的是

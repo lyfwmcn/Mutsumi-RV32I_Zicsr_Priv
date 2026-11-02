@@ -127,25 +127,27 @@ always @(posedge clk or negedge rst_n) begin
         satp <= 32'h0;
     end
     else if (flush) begin
+        // flush 只丢弃"推测的 CSR 前递"，架构 CSR 必须回落到已提交值。
+        // 之前这里清 0，会在 trap/ret 后造成一拍 mtvec/stvec/mepc/satp 全 0。
         interrupt_cause_valid <= 1'h0;
         medeleg_exception_cause <= 1'h0;
         mideleg_interrupt_cause <= 1'h0;
-        MIE <= 1'h0;
-        MPIE <= 1'h0;
-        SIE <= 1'h0;
-        SPIE <= 1'h0;
-        SPP <= 1'h0;
-        MPP <= 2'h0;
+        MIE <= cur_MIE;
+        MPIE <= cur_MPIE;
+        SIE <= cur_SIE;
+        SPIE <= cur_SPIE;
+        SPP <= cur_SPP;
+        MPP <= cur_MPP;
         interrupt_cause <= 4'h0;
-        medeleg <= 32'h0;
-        mepc <= 32'h0;
-        mideleg <= 32'h0;
-        mie <= 32'h0;
-        mip <= 32'h0;
-        mtvec <= 32'h0;
-        sepc <= 32'h0;
-        stvec <= 32'h0;
-        satp <= 32'h0;
+        medeleg <= cur_medeleg;
+        mepc <= cur_mepc;
+        mideleg <= cur_mideleg;
+        mie <= cur_mie;
+        mip <= cur_mip;
+        mtvec <= cur_mtvec;
+        sepc <= cur_sepc;
+        stvec <= cur_stvec;
+        satp <= cur_satp;
     end
     else if (!stall) begin
         interrupt_cause_valid <= _interrupt_cause != 4'h0;

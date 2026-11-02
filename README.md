@@ -25,7 +25,7 @@ Verilog / SystemVerilog 编写。核实现了 **RV32I + Zicsr + Zifencei + 特�
 - Sv32 两级页表，支持 4 KiB 页和 4 MiB 超级页
 - TLB + PWC（页表遍历缓存）
 - 硬件补 A/D：走表时自动置 Accessed / Dirty 并写回页表
-- 权限检查：R/W/X/U、SUM、MXR，非叶 PTE 保留位检查
+- 权限检查：R/W/X/U 基本检查、非叶 PTE 保留位检查（SUM/MXR/MPRV 尚未参与）
 - I-cache / D-cache 各 4 路 × 64 行 × 16 B = 1 KiB，tag 使用物理地址
 - D-cache 写回（write-back）；`fence.i` 写回脏行并清 I-cache；
   `sfence.vma` 写回脏行并清 PWC/TLB
@@ -61,6 +61,7 @@ syn/device.v     存储器路由、SDRAM 仲裁、ROM、UART、null device
 syn/sdram_*.v    SDRAM 控制器与 ECP5 PHY
 tests/boot_rom/  写入 boot ROM 的上电程序
 tests/tb/        标准测试台
+tests/riscv-tests/  riscv-tests rv32ui-p 运行环境
 opencode/        定向测试程序与测试台
 tools/           镜像转换与串口校验脚本
 docs/            本地 ISA / CSR / 异常 / MMU 参考
@@ -149,6 +150,20 @@ grep -vE '^[[:space:]]*($|#|//)' filelists/syn_filelist.f > /tmp/files.f
 | `opencode/tb/tb_sdram_phy.v` | SDRAM 控制器 + PHY + 模型 | 17/17 |
 | `opencode/tb/tb_rate.v` | I 侧连续取指节奏 | 24 条 890 ns |
 | `opencode/tb/tb_lb.v` | 串行 64 次 `lbu` | bad=0 |
+| `tests/riscv-tests/run_rv32ui.py` | riscv-tests `rv32ui-p-*` | 42/42 |
+
+### riscv-tests rv32ui
+
+```bash
+git clone --recursive https://github.com/riscv-software-src/riscv-tests.git /tmp/riscv-tests
+export RISCV_TESTS=/tmp/riscv-tests
+python3 tests/riscv-tests/run_rv32ui.py
+```
+
+`rv32ui-p` 全部通过。测试镜像链接在 `0x10000`，`tohost` 放在 Device 区；
+`ma_data` 的非对齐访问由 `tests/riscv-tests/env/p/misalign.S` 里的
+`mtvec_handler` 软件模拟，RTL 本身仍然对非对齐访问触发异常。详见
+`tests/riscv-tests/README.md`。
 
 `opencode/` 下另有定向用例和单元测试台，详见 `opencode/README.md`。
 
@@ -167,7 +182,10 @@ nextpnr 日志中有两个 `Max frequency`：第一个是布局后估计，最�
 ## 已知限制
 
 - 无 PMP：S/U 模式只能依靠 Sv32 的 PTE 权限隔离
+- Sv32 只实现了基本 U 位检查；`mstatus.SUM` / `MXR` / `MPRV` 尚未参与权限判断
 - 无 M / A 扩展，无浮点与压缩指令
+- 无硬件非对齐 load/store：会触发异常；`rv32ui` 的 `ma_data` 通过测试环境
+  `mtvec_handler` 软件模拟
 - PMA 只有 2 位属性，没有不可缓存窗口、W/X/atomic 属性
 - ROM 仅 4 KiB，剩余 EBR 约 36 KiB；更大程序需要从 SPI flash 加载
 - 运行中 PLL 失锁不会复位（`rst_gen` 只在 `!rst_n` 时工作）

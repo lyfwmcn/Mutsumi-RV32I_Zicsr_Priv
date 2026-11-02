@@ -1220,6 +1220,7 @@ always @(*) begin
                         d_save_pwc_or_tlb = 1'h1;
                         nxt_d_pwc_or_tlb = 1'h0;
                         nxt_d_set_d = !d_tlb_d() && d_op[0];
+                        d_save_set_d = 1'h1;
                         d_save_pte_paddr = 1'h1;
                         nxt_d_pte_paddr = {d_tlb_tag_out[47:26], d_vaddr[19:10]};
                     end
@@ -1284,6 +1285,7 @@ always @(*) begin
                         d_save_pwc_or_tlb = 1'h1;
                         nxt_d_pwc_or_tlb = 1'h1;
                         nxt_d_set_d = !d_pwc_d() && d_op[0];
+                        d_save_set_d = 1'h1;
                         d_save_pte_paddr = 1'h1;
                         nxt_d_pte_paddr = {d_satp[21:0], d_vaddr[29:20]};
                     end
@@ -1525,22 +1527,12 @@ always @(*) begin
                 nxt_d_high_word = d_ram_respond_data;
             end
             else if (!d_ram_request_busy) begin
-                if (d_pwc_or_tlb) begin
-                    d_ram_request(
-                        1'h1,
-                        16'hf << {d_pte_paddr[1:0], 2'h0},
-                        {d_pte_paddr[31:2], 3'h0},
-                        {4{replace_ad(1'h1, d_set_d, saved_d_pwc_out)}}
-                    );
-                end
-                else begin
-                    d_ram_request(
-                        1'h1,
-                        16'hf << {d_pte_paddr[1:0], 2'h0},
-                        {d_pte_paddr[31:2], 3'h0},
-                        {4{replace_ad(1'h1, d_set_d, saved_d_tlb_out)}}
-                    );
-                end
+                d_ram_request(
+                    1'h1,
+                    16'hf << {d_pte_paddr[1:0], 2'h0},
+                    {d_pte_paddr[31:2], 3'h0},
+                    {4{replace_ad(1'h1, d_set_d, {d_high_word, d_low_word})}}
+                );
                 d_next_status = D_UPDATE;
             end
             else begin
@@ -1746,22 +1738,12 @@ always @(*) begin
                 nxt_d_high_word = d_ram_respond_data;
             end
             else if (!d_ram_request_busy) begin
-                if (i_pwc_or_tlb) begin
-                    d_ram_request(
-                        1'h1,
-                        16'hf << {i_pte_paddr[1:0], 2'h0},
-                        {i_pte_paddr[31:2], 3'h0},
-                        {4{replace_ad(1'h1, 1'h0, i_pwc_out)}}
-                    );
-                end
-                else begin
-                    d_ram_request(
-                        1'h1,
-                        16'hf << {i_pte_paddr[1:0], 2'h0},
-                        {i_pte_paddr[31:2], 3'h0},
-                        {4{replace_ad(1'h1, 1'h0, i_tlb_out)}}
-                    );
-                end
+                d_ram_request(
+                    1'h1,
+                    16'hf << {i_pte_paddr[1:0], 2'h0},
+                    {i_pte_paddr[31:2], 3'h0},
+                    {4{replace_ad(1'h1, 1'h0, {d_high_word, d_low_word})}}
+                );
                 d_finish_i = 1'h1;
                 case (d_ireturn)
                     1'h0:    d_next_status = D_IDLE;

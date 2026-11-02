@@ -56,11 +56,8 @@ assign result[6] = _alu_in_a | _alu_in_b;
 assign result[7] = _alu_in_a & _alu_in_b;
 
 assign zf = sum == 32'h0;
-// 与原 cf 完全等价：原实现先做 32 位的 (~_alu_in_b + 1)（丢弃其进位）再相加，
-// 因此当 _alu_in_b == 0 时，它的 cout 与整条 a-b 链的进位相差一位。
-wire neg_cy;
-assign neg_cy = sub & (|_alu_in_b);
-assign cf = (sub ? diff_ext[32] : add_ext[32]) ^ neg_cy;
+// 无符号比较直接用 a-b 的借位；减法没有借位（a>=b）时 borrow=0。
+assign cf = sub ? borrow : add_ext[32];
 assign sf = sum[31];
 // 与原 of 完全等价：原式用 __alu_in_b[31]（即 (~_alu_in_b + 1) 的 MSB）。
 // 这里用 31 位或归约推导该 MSB：sub 时 MSB(~x+1) = x[31] ^ |x[30:0]。
