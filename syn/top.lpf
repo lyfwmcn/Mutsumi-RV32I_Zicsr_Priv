@@ -1,3 +1,5 @@
+// iCESugar Pro (LFE5U-25F-6BG256C)
+
 LOCATE COMP "clk" SITE "P6";
 IOBUF  PORT "clk" IO_TYPE=LVCMOS33;
 FREQUENCY PORT "clk" 25 MHZ;
@@ -11,6 +13,99 @@ IOBUF  PORT "led_g" IO_TYPE=LVCMOS33;
 LOCATE COMP "led_b" SITE "A12";
 IOBUF  PORT "led_b" IO_TYPE=LVCMOS33;
 
-// 串口 TX：iCELink-UART3-RX（官方 uart_tx demo 用的管脚）
+// ---- SDRAM (IS42S16160B, 32MB) ----
+LOCATE COMP "sdram_clk" SITE "R15";
+IOBUF  PORT "sdram_clk" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_cke" SITE "L16";
+IOBUF  PORT "sdram_cke" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_cs_n" SITE "A14";
+IOBUF  PORT "sdram_cs_n" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_ras_n" SITE "B16";
+IOBUF  PORT "sdram_ras_n" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_cas_n" SITE "G16";
+IOBUF  PORT "sdram_cas_n" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_we_n" SITE "A15";
+IOBUF  PORT "sdram_we_n" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_ba[0]" SITE "G15";
+LOCATE COMP "sdram_ba[1]" SITE "B14";
+IOBUF  PORT "sdram_ba[0]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_ba[1]" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_a[0]"  SITE "H15";
+LOCATE COMP "sdram_a[1]"  SITE "B13";
+LOCATE COMP "sdram_a[2]"  SITE "B12";
+LOCATE COMP "sdram_a[3]"  SITE "J16";
+LOCATE COMP "sdram_a[4]"  SITE "J15";
+LOCATE COMP "sdram_a[5]"  SITE "R12";
+LOCATE COMP "sdram_a[6]"  SITE "K16";
+LOCATE COMP "sdram_a[7]"  SITE "R13";
+LOCATE COMP "sdram_a[8]"  SITE "T13";
+LOCATE COMP "sdram_a[9]"  SITE "K15";
+LOCATE COMP "sdram_a[10]" SITE "A13";
+LOCATE COMP "sdram_a[11]" SITE "R14";
+LOCATE COMP "sdram_a[12]" SITE "T14";
+IOBUF  PORT "sdram_a[0]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[1]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[2]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[3]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[4]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[5]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[6]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[7]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[8]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[9]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[10]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[11]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_a[12]" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_dq[0]"  SITE "F16";
+LOCATE COMP "sdram_dq[1]"  SITE "E15";
+LOCATE COMP "sdram_dq[2]"  SITE "F15";
+LOCATE COMP "sdram_dq[3]"  SITE "D14";
+LOCATE COMP "sdram_dq[4]"  SITE "E16";
+LOCATE COMP "sdram_dq[5]"  SITE "C15";
+LOCATE COMP "sdram_dq[6]"  SITE "D16";
+LOCATE COMP "sdram_dq[7]"  SITE "B15";
+LOCATE COMP "sdram_dq[8]"  SITE "R16";
+LOCATE COMP "sdram_dq[9]"  SITE "P16";
+LOCATE COMP "sdram_dq[10]" SITE "P15";
+LOCATE COMP "sdram_dq[11]" SITE "N16";
+LOCATE COMP "sdram_dq[12]" SITE "N14";
+LOCATE COMP "sdram_dq[13]" SITE "M16";
+LOCATE COMP "sdram_dq[14]" SITE "M15";
+LOCATE COMP "sdram_dq[15]" SITE "L15";
+IOBUF  PORT "sdram_dq[0]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[1]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[2]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[3]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[4]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[5]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[6]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[7]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[8]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[9]"  IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[10]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[11]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[12]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[13]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[14]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dq[15]" IO_TYPE=LVCMOS33;
+
+LOCATE COMP "sdram_dm[0]" SITE "C16";
+LOCATE COMP "sdram_dm[1]" SITE "T15";
+IOBUF  PORT "sdram_dm[0]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dm[1]" IO_TYPE=LVCMOS33;
+
+// UART (iCELink CDC)
 LOCATE COMP "uart_tx" SITE "B9";
-IOBUF  PORT "uart_tx" IO_TYPE=LVCMOS33 DRIVE=4;
+IOBUF  PORT "uart_tx" IO_TYPE=LVCMOS33;
+
+// UART RX（主机 -> FPGA），A9
+LOCATE COMP "uart_rx" SITE "A9";
+IOBUF  PORT "uart_rx" IO_TYPE=LVCMOS33;

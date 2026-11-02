@@ -1,115 +1,75 @@
-CC           := riscv64-unknown-elf-gcc
-LD           := riscv64-unknown-elf-ld
-OBJCOPY      := riscv64-unknown-elf-objcopy
-IVERILOG     := iverilog
 PYTHON       := python3
-YOSYS        := yosys
-NEXTPNR_ECP5 := nextpnr-ecp5
-ECPPACK      := ecppack
-
 
 BUILD_DIR    := build
 
+# ---------------- 上电程序镜像（烘进 bit 流，CPU 直接从 ROM 0~4K 执行）----------------
+BOOTSRC      := tests/boot_rom/uart_prog.s
+BOOTELF      := $(BUILD_DIR)/boot.elf
+BOOTBIN      := $(BUILD_DIR)/boot.bin
+BOOTHEX      := $(BUILD_DIR)/boot.hex
+BOOT_LINES   := 256
 
-SIMBIN       := $(BUILD_DIR)/sim_test.bin
-SIMELF       := $(BUILD_DIR)/sim_test.elf
-SIMOBJ       := $(BUILD_DIR)/sim_start.o $(BUILD_DIR)/sim_trap.o $(BUILD_DIR)/sim_main.o
-SIMLDSCRIPT  := tests/sim/linker.ld
-BIN2HEX      := tools/bin2hex.py
+# ---------------- 综合 ----------------
+SYNFILELIST  := filelists/syn_filelist.f
+SYNSRCS      := $(shell grep -vE '^[[:space:]]*($$|#|//)' $(SYNFILELIST))
+SYNLPF       := syn/top.lpf
+SYNJSON      := $(BUILD_DIR)/syn_top.json
+SYNCONFIG    := $(BUILD_DIR)/syn_top_out.config
+SYNBIT       := $(BUILD_DIR)/syn_top.bit
 
-
-SYNMEM0      := $(BUILD_DIR)/syn_mem0.hex
-SYNMEM1      := $(BUILD_DIR)/syn_mem1.hex
-SYNBIN       := $(BUILD_DIR)/syn_test.bin
-SYNELF       := $(BUILD_DIR)/syn_test.elf
-SYNOBJ       := $(BUILD_DIR)/syn_test.o
-SYNASM       := tests/syn/test.s
-SYNLDSCRIPT  := tests/syn/linker.ld
-
-
-SIMFILELIST  := filelists/sim_filelist.f
-SIMSRCS      := $(shell cat filelists/sim_filelist.f | grep -v '^$$')
-SIM          := $(BUILD_DIR)/sim
-
-
-SYNSRCS      := $(shell cat filelists/syn_filelist.f | grep -v '^$$')
-SYN          := $(BUILD_DIR)/top.bit
-CONFIG       := $(BUILD_DIR)/top_out.config
-JSON         := $(BUILD_DIR)/top.json
-LPF          := syn/top.lpf
-
-
-TIMING       := $(BUILD_DIR)/timing.json
-TIMCONFIG    := $(BUILD_DIR)/timing.config
+# ---------------- 时序报告 ----------------
 TIMJSON      := $(BUILD_DIR)/timing_synth.json
-STAGETIMING  := tools/stage_timing.py
+TIMCONFIG    := $(BUILD_DIR)/timing.config
+TIMTIMING    := $(BUILD_DIR)/timing.json
 
+.PHONY: all synth timing clean
 
-.PHONY: all sim synth timing clean
-
-
-all: sim | $(BUILD_DIR)
+all: synth
 
 
 $(BUILD_DIR):
 	mkdir -p $@
 
 
-$(SIMBIN): $(SIMELF) | $(BUILD_DIR)
-	$(OBJCOPY) -O binary $< $@
+# ---------------- 上电程序镜像 ----------------
+$(BOOTELF): $(BOOTSRC) | $(BUILD_DIR)
+	riscv64-unknown-elf-gcc -march=rv32i_zicsr_zifencei -mabi=ilp32 -nostdlib -nostartfiles -Ttext=0 -o $@ $<
 
-$(SIMELF): $(SIMOBJ) $(SIMLDSCRIPT) | $(BUILD_DIR)
-	$(LD) -m elf32lriscv -T $(SIMLDSCRIPT) $(SIMOBJ) -o $@
+$(BOOTBIN): $(BOOTELF)
+	riscv64-unknown-elf-objcopy -O binary $< $@
 
-$(BUILD_DIR)/sim_%.o: tests/sim/%.s | $(BUILD_DIR)
-	$(CC) -c $< -o $@ -march=rv32i_zicsr -mabi=ilp32 -ffreestanding
-
-$(BUILD_DIR)/sim_%.o: tests/sim/%.c | $(BUILD_DIR)
-	$(CC) -c $< -o $@ -march=rv32i_zicsr -mabi=ilp32 -ffreestanding
+$(BOOTHEX): $(BOOTBIN) tools/bin2hex128.py
+	$(PYTHON) tools/bin2hex128.py $(BOOTBIN) $@ $(BOOT_LINES)
 
 
-sim: $(SIM) | $(BUILD_DIR)
-	./$<
+# ---------------- 综合 / 布线 / 打包 ----------------
+$(SYNJSON): $(SYNSRCS) $(SYNFILELIST) $(BOOTHEX) | $(BUILD_DIR)
+	yosys -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $(SYNJSON)"
+	rm -f abc.history
 
-$(SIM): $(SIMFILELIST) $(SIMSRCS) $(SIMBIN) | $(BUILD_DIR)
-	$(IVERILOG) -o $@ -f $<
+$(SYNCONFIG): $(SYNJSON) $(SYNLPF)
+	# 50 MHz 下实测 Fmax 约 54~57 MHz（随版本略有波动），seed 7 一般最好
+	nextpnr-ecp5 --25k --package CABGA256 --speed 6 --json $(SYNJSON) --textcfg $@ --lpf $(SYNLPF) --freq 50 --seed 7 --timing-allow-fail
+
+$(SYNBIT): $(SYNCONFIG)
+	ecppack --input $< --bit $@
 
 
-synth: $(SYN) | $(BUILD_DIR)
+# 综合 + 布线 + 打包，然后把 bit 流拷到 iCELink 盘（自动烧写）
+synth: $(SYNBIT)
 	@set -e; D=$$(find /run/media/$$USER -maxdepth 1 -name iCELink 2>/dev/null | head -1); \
-	if [ -z "$$D" ]; then echo "iCELink 盘未挂载，请先挂载后再 make prog"; exit 1; fi; \
-	cp $(SYN) $$D/ && sync && echo "已复制到 $$D，固件自动烧写中…"
-
-$(SYN): $(CONFIG) | $(BUILD_DIR)
-	$(ECPPACK) --input $< --bit $@
-
-$(CONFIG): $(JSON) $(LPF) | $(BUILD_DIR)
-	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(JSON) --textcfg $@ --lpf $(LPF) --freq 25
-
-$(JSON): $(SYNSRCS) $(SYNMEM0) $(SYNMEM1) | $(BUILD_DIR)
-	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $(JSON)"
-
-$(SYNMEM0) $(SYNMEM1) &: $(SYNBIN) $(BIN2HEX) | $(BUILD_DIR)
-	$(PYTHON) $(BIN2HEX) $< $(SYNMEM0) $(SYNMEM1)
-
-$(SYNBIN): $(SYNELF) | $(BUILD_DIR)
-	$(OBJCOPY) -O binary $< $@
-
-$(SYNELF): $(SYNOBJ) $(SYNLDSCRIPT) | $(BUILD_DIR)
-	$(LD) -m elf32lriscv -T $(SYNLDSCRIPT) $< -o $@
-
-$(SYNOBJ): $(SYNASM) | $(BUILD_DIR)
-	$(CC) -c $< -o $@ -march=rv32i_zicsr -mabi=ilp32 -ffreestanding
+	if [ -z "$$D" ]; then echo "iCELink 盘未挂载，请先挂载后再 make synth"; exit 1; fi; \
+	cp $(SYNBIT) $$D/ && sync && echo "已复制到 $$D，固件自动烧写中…"
 
 
-timing: $(TIMING) $(STAGETIMING) | $(BUILD_DIR)
-	$(PYTHON) $(STAGETIMING) $<
+# ---------------- 时序报告 ----------------
+$(TIMJSON): $(SYNSRCS) $(SYNFILELIST) $(BOOTHEX) | $(BUILD_DIR)
+	yosys -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $@"
 
-$(TIMJSON): $(SYNSRCS) $(SYNMEM0) $(SYNMEM1) | $(BUILD_DIR)
-	$(YOSYS) -p "read_verilog -sv $(SYNSRCS); hierarchy -top top; synth_ecp5 -json $(TIMJSON)"
+$(TIMTIMING) $(TIMCONFIG) &: $(TIMJSON) $(SYNLPF)
+	nextpnr-ecp5 --25k --package CABGA256 --speed 6 --json $(TIMJSON) --textcfg $(TIMCONFIG) --lpf $(SYNLPF) --freq 45 --report $(TIMTIMING) --detailed-timing-report
 
-$(TIMING): $(TIMJSON) $(LPF) | $(BUILD_DIR)
-	$(NEXTPNR_ECP5) --25k --package CABGA256 --speed 6 --json $(TIMJSON) --textcfg $(TIMCONFIG) --lpf $(LPF) --freq 25 --report $@ --detailed-timing-report
+timing: $(TIMTIMING)
 
 
 clean:
