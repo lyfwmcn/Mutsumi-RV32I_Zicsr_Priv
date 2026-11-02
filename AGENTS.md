@@ -24,9 +24,10 @@ RV32I + Zicsr + Sv32 软核，Verilog/SystemVerilog，目标 Lattice ECP5（25k�
 - **文件表是编译的唯一依据**：`filelists/syn_filelist.f`（32 个文件，和模块一一对应）。
   空行和 `#` / `//` 注释会被过滤。新增 RTL 必须加进表里。
 - 综合用 `read_verilog -sv`（接受 SystemVerilog）。
-- **上电镜像烘进 bitstream**：`opencode/uart_prog.s` → `build/boot.hex`（`tools/bin2hex128.py`
-  生成 256 行 × 128 位）→ `syn/boot_rom.v` 的 `$readmemh`。改程序必须重新综合才会生效。
-  换程序：`make build/boot.hex BOOTSRC=opencode/xxx.s` 再 `make build/syn_top.bit`。
+- **上电镜像烘进 bitstream**：`tests/boot_rom/uart_prog.s` → `build/boot.hex`
+  （`tools/bin2hex128.py` 生成 256 行 × 128 位）→ `syn/boot_rom.v` 的 `$readmemh`。
+  改程序必须重新综合才会生效。换程序：`make build/boot.hex BOOTSRC=opencode/sdram_test.s`
+  再 `make build/syn_top.bit`（其余上电测试程序仍在 `opencode/`）。
 - **仿真必须在仓库根目录跑**（`boot_rom.v` 用 CWD 相对路径 `build/boot.hex`）。
 - 所有 `src/`、`syn/`、`tests/` 的 `.v` 都带 `` `timescale ``（Verilator 的 TIMESCALEMOD 警告已清零）。
 
@@ -89,7 +90,7 @@ request_valid / request_we / request_be[15:0] / request_addr / request_data[127:
 ### 启动流程
 
 ```
-rst_n 放开（PLL LOCK 后数 1024 拍）→ CPU 从 ROM 0x0 取指 → 跑 opencode/uart_prog.s
+rst_n 放开（PLL LOCK 后数 1024 拍）→ CPU 从 ROM 0x0 取指 → 跑 tests/boot_rom/uart_prog.s
 ```
 
 没有加载阶段，`boot_done` 恒 1。程序里 `li x1, 0x02000000` + `sb` 就是往 UART 发字节。

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """上板串口自检：读 iCELink 的 USB 串口，和 build/boot.bin 逐字节比对。
 
-板上程序（opencode/uart_prog.s，烧进 ROM 0~4K）每轮：
+板上程序（tests/boot_rom/uart_prog.s，烧进 ROM 0~4K）每轮：
     12 行 x 16 字节，行尾 '~'，轮末 '\\n'，然后延时约 0.2 s 再重复。
 本脚本收流、按行比对，分别统计：
     - 数据错字节（真错误，FPGA/缓存/ROM 的问题）

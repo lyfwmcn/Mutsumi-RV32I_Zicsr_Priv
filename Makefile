@@ -3,7 +3,7 @@ PYTHON       := python3
 BUILD_DIR    := build
 
 # ---------------- 上电程序镜像（烘进 bit 流，CPU 直接从 ROM 0~4K 执行）----------------
-BOOTSRC      := opencode/uart_prog.s
+BOOTSRC      := tests/boot_rom/uart_prog.s
 BOOTELF      := $(BUILD_DIR)/boot.elf
 BOOTBIN      := $(BUILD_DIR)/boot.bin
 BOOTHEX      := $(BUILD_DIR)/boot.hex
