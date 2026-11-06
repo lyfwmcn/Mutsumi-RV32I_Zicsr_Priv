@@ -37,6 +37,11 @@ LOCATE COMP "sdram_ba[1]" SITE "B14";
 IOBUF  PORT "sdram_ba[0]" IO_TYPE=LVCMOS33;
 IOBUF  PORT "sdram_ba[1]" IO_TYPE=LVCMOS33;
 
+LOCATE COMP "sdram_dm[0]" SITE "C16";
+LOCATE COMP "sdram_dm[1]" SITE "T15";
+IOBUF  PORT "sdram_dm[0]" IO_TYPE=LVCMOS33;
+IOBUF  PORT "sdram_dm[1]" IO_TYPE=LVCMOS33;
+
 LOCATE COMP "sdram_a[0]"  SITE "H15";
 LOCATE COMP "sdram_a[1]"  SITE "B13";
 LOCATE COMP "sdram_a[2]"  SITE "B12";
@@ -96,11 +101,6 @@ IOBUF  PORT "sdram_dq[12]" IO_TYPE=LVCMOS33;
 IOBUF  PORT "sdram_dq[13]" IO_TYPE=LVCMOS33;
 IOBUF  PORT "sdram_dq[14]" IO_TYPE=LVCMOS33;
 IOBUF  PORT "sdram_dq[15]" IO_TYPE=LVCMOS33;
-
-LOCATE COMP "sdram_dm[0]" SITE "C16";
-LOCATE COMP "sdram_dm[1]" SITE "T15";
-IOBUF  PORT "sdram_dm[0]" IO_TYPE=LVCMOS33;
-IOBUF  PORT "sdram_dm[1]" IO_TYPE=LVCMOS33;
 
 // UART (iCELink CDC)
 LOCATE COMP "uart_tx" SITE "B9";

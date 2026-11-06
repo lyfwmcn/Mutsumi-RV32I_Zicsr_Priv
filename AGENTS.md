@@ -47,20 +47,22 @@ syn/top.v            板级顶层：PLL + rst_gen + cpu_subsys + LED
         ├ syn/null_device.v ×2
         ├ syn/uart_tx_unit.v
         ├ 仲裁器（d / i 各一个 pending 槽，d 优先）
-        ├ syn/sdram_ctr.v
-        └ syn/sdram_phy_ecp5.v
+        └ syn/sdram_ctr.v（内部集成 PHY）
 ```
 
 ### 地址映射 / PMA
 
 `src/uncore.v` 里的 `pma()` 返回 2 位：
 
-| paddr（字地址） | 字节范围 | 值 | I 侧 | D 侧 |
+| paddr（4B 字地址） | 字节范围 | 值 | I 侧 | D 侧 |
 |---|---|---|---|---|
-| `[31:24] != 0` | ≥ 1 GB | 0 | access fault | access fault |
-| `[23]` | ≥ 32 MB | 2 | access fault | 不缓存（直通） |
+| `[31:24] != 0` | ≥ 64 MB | 0 | access fault | access fault |
+| `[23]` | 32 MB ~ 64 MB | 2 | access fault | 不缓存（直通） |
 | `[22:10] == 0` | < 4 KB（ROM） | 3 | 可缓存 | 不缓存（直通） |
 | 其余 | 4 KB ~ 32 MB | 1 | 可缓存 | 可缓存 |
+
+> uncore / device 内部用 **4B 字地址**（字节地址 >> 2）；device 送给
+> `boot_rom` / `sdram_ctr` 时再左移 1 位，转成它们使用的 **2B 字地址**。
 
 ```
 0x0000_0000 ~ 0x0000_0FFF   固定 ROM（4KB，只读，内容 = build/boot.hex）
@@ -127,11 +129,9 @@ rst_n 放开（PLL LOCK 后数 1024 拍）→ CPU 从 ROM 0x0 取指 → 跑 tes
   BL=8、CAS=2（模式寄存器 `10'b0000100011`）、每次访问 auto-precharge（A10=1）；
   init = PRECHARGE-ALL → 2× AUTO-REFRESH → LOAD-MODE-REGISTER；之后每 ≤7.8 µs 刷新。
   50 MHz 下 `tRP=tRCD=2`、`tRFC=4`、`tMRD=2`、`tFresh=385`（25 MHz 下 `tRP=tRCD=1`、`tFresh=192`）。
-- **SDRAM PHY（PIC/IOLOGIC）**：`syn/sdram_phy_ecp5.v` 用 `OFS1P3BX/OFS1P3DX`、`IFS1P3BX`、`BB`
-  把 SDRAM 寄存器放进 I/O 单元。**所有输出晚 1 拍、读回数据再晚 1 拍**，所以 `sdram_ctr` 的
-  `tCL` 必须是 **2**（0/1/3 都挂）。
-- **测试台必须经 PHY 接 SDRAM 模型**，否则读回数据整体错一拍（现象像取指全 0）。
-  `tests/tb/sdram_model.v` 已按上板实测校准（读数据"命令后第 1 拍"+ 半周期 tAC），别再单独调。
+- **SDRAM PHY（PIC/IOLOGIC）**：`syn/sdram_ctr.v` 内部直接用 `OFS1P3BX/OFS1P3DX`、`IFS1P3DX`、`BB`
+  把 SDRAM 寄存器放进 I/O 单元。**所有输出晚 1 拍、读回数据再晚 1 拍**，所以 `tCL` 取 **1**。
+- **测试台必须直连 `sdram_ctr` 的 `sdram_dq`**；`tests/tb/sdram_model.v` 已按上板实测校准。
 - **UART**：FPGA TX=B9、RX=A9 接板上 iCELink，主机侧是 USB CDC ACM `/dev/ttyACM0`，115200 8N1。
 
 ## 测试
@@ -160,7 +160,6 @@ verilator --binary --timing -Wno-lint -Wno-fatal -Wno-WIDTH -Wno-UNUSED -Wno-UND
 | `tests/tb/tb_device.v` | device：ROM 路由 / SDRAM 读写 / **d-i 同拍仲裁** / UART 帧 / null | 15/15 |
 | `tests/tb/tb_null.v` | null_device 单测 | 11/11 |
 | `tests/tb/tb_uart.v` | uart_tx_unit 单测（8 拍读 0、写发首字节、busy） | 39/39 |
-| `opencode/tb/tb_sdram_phy.v` | sdram_ctr + PHY + 模型 | 17/17 |
 | `opencode/tb/tb_rate.v` | I 侧连取节奏 | 24 条 890 ns（38.7 ns/条） |
 | `opencode/tb/tb_lb.v` | 串行 64 次 lbu | bad=0 |
 | `tests/riscv-tests/run_rv32ui.py` | riscv-tests `rv32ui-p-*` | 42/42 |

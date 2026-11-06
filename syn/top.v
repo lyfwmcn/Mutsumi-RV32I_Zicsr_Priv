@@ -25,12 +25,12 @@ module top (
     output        sdram_cas_n,
     output        sdram_we_n,
     output [1:0]  sdram_ba,
+    output [1:0]  sdram_dm,
     output [12:0] sdram_a,
     inout  [15:0] sdram_dq,
-    output [1:0]  sdram_dm,
 
-    output        uart_tx,
-    input         uart_rx
+    input         uart_rx,
+    output        uart_tx
 );
 
 // ---------------------------- 时钟 / PLL / ODDR ----------------------------
@@ -57,30 +57,38 @@ EHXPLLL #(
 ODDRX1F oddr_sdram_clk (.D0(1'b1), .D1(1'b0), .SCLK(clk_sdram_ps), .Q(sdram_clk));
 
 wire rst_n;
-rst_gen rst_gen (.clk(clk_sys), .locked(locked), .rst_n(rst_n));
+rst_gen rst_gen (
+    .clk(clk_sys),
+    .locked(locked),
+    .rst_n(rst_n)
+);
 
 // ------------------------------ CPU 子系统 --------------------------------
-wire        boot_done;
-wire [1:0]  privilege;
-wire [31:0] satp;
-wire        dbg_cpu, dbg_vfy, dbg_uart, dbg_blink;
+cpu_subsys u_cpu_subsys (
+    .clk  (clk_sys),
+    .rst_n(rst_n),
 
-cpu_subsys u_cpu (
-    .clk(clk_sys), .rst_n(rst_n),
-    .sdram_cke(sdram_cke), .sdram_cs_n(sdram_cs_n), .sdram_ras_n(sdram_ras_n),
-    .sdram_cas_n(sdram_cas_n), .sdram_we_n(sdram_we_n), .sdram_ba(sdram_ba),
-    .sdram_dm(sdram_dm), .sdram_a(sdram_a), .sdram_dq(sdram_dq),
-    .uart_tx(uart_tx), .uart_rx(uart_rx),
-    .boot_done(boot_done), .privilege(privilege), .satp(satp),
-    .dbg_cpu(dbg_cpu), .dbg_vfy(dbg_vfy), .dbg_uart(dbg_uart), .dbg_blink(dbg_blink)
+    .external_interrupt_clear(1'h0),
+    .external_interrupt_set  (1'h0),
+    .timer_interrupt_clear   (1'h0),
+    .timer_interrupt_set     (1'h0),
+
+    .sdram_cke  (sdram_cke),
+    .sdram_cs_n (sdram_cs_n),
+    .sdram_ras_n(sdram_ras_n),
+    .sdram_cas_n(sdram_cas_n),
+    .sdram_we_n (sdram_we_n),
+    .sdram_ba   (sdram_ba),
+    .sdram_dm   (sdram_dm),
+    .sdram_a    (sdram_a),
+    .sdram_dq   (sdram_dq),
+
+    .uart_tx    (uart_tx)
 );
 
 // -------------------------------- 状态灯 ----------------------------------
-// led_r 常亮 = 加载完成（boot_done=1）
-// led_b 常亮 = 回读第 0 行完全一致（vfy_ok）
-// led_g 闪 nmatch 次（0~8，每格 0.25s）后停 8 格，循环 —— 用来数"回读命中几个半字"
-assign led_r = boot_done;
-assign led_g = dbg_cpu;
-assign led_b = dbg_vfy;   // = 主机->FPGA 收到过字节
+assign led_r = 1'h0;
+assign led_g = 1'h0;
+assign led_b = 1'h0;
 
 endmodule

@@ -1,13 +1,5 @@
 `timescale 1ns / 1ns
 
-// 空设备（黑洞）：读永远返回 0，写直接丢弃
-//
-// 接口和 boot_rom / sdram_ctr 一致：
-//   request_valid/we/be/addr/data 进；
-//   request_busy 高到事务结束（读 8 拍 / 写 1 拍）；
-//   读的 8 拍走 respond_valid + respond_data（全 0），写不产生响应。
-//
-// 注：模块不能叫 null（SystemVerilog 关键字，verilator 会报语法错），故用 null_device。
 module null_device (
     input              clk,
     input              rst_n,
@@ -15,63 +7,77 @@ module null_device (
     input              request_valid,
     input              request_we,
     input      [15:0]  request_be,
-    input      [23:0]  request_addr,
+    input      [31:0]  request_addr,
     input      [127:0] request_data,
     output reg         request_busy,
     output reg         respond_valid,
     output reg [15:0]  respond_data
 );
 
-    localparam IDLE = 2'h0;
-    localparam RD   = 2'h1;   // 读：连续 8 拍返回 0
-    localparam WR   = 2'h2;   // 写：1 拍完成、无响应
+reg nxt_status;
 
-    reg [1:0] status;
-    reg [2:0] cnt;
 
-    always @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            status        <= IDLE;
-            cnt           <= 3'h0;
-            request_busy  <= 1'h0;
-            respond_valid <= 1'h0;
-            respond_data  <= 16'h0;
+localparam IDLE = 1'h0;
+localparam SEND = 1'h1;
+reg status;
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        status <= IDLE;
+    end
+    else begin
+        status <= nxt_status;
+    end
+end
+
+reg t_begin;
+
+
+reg [2:0] t;
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        t <= 3'h0;
+    end
+    else begin
+        if (t_begin) begin
+            t <= 3'h7;
         end
-        else begin
-            case (status)
-                IDLE: begin
-                    if (request_valid) begin
-                        request_busy <= 1'h1;
-                        if (request_we) begin
-                            // 写：下一拍就结束
-                            status <= WR;
-                        end
-                        else begin
-                            // 读：连续 8 拍返回 0
-                            status        <= RD;
-                            respond_valid <= 1'h1;
-                            respond_data  <= 16'h0;
-                            cnt           <= 3'h0;
-                        end
-                    end
-                end
-                RD: begin
-                    if (cnt == 3'h7) begin
-                        respond_valid <= 1'h0;
-                        request_busy  <= 1'h0;
-                        status        <= IDLE;
-                    end
-                    else begin
-                        cnt <= cnt + 3'h1;
-                    end
-                end
-                WR: begin
-                    request_busy <= 1'h0;
-                    status       <= IDLE;
-                end
-                default: status <= IDLE;
-            endcase
+        else if (t != 3'h0) begin
+            t <= t - 3'h1;
         end
     end
+end
+
+always @(*) begin
+    request_busy  = 1'h0;
+    respond_valid = 1'h0;
+    respond_data  = 16'h0;
+    nxt_status    = IDLE;
+    t_begin       = 1'h0;
+    case (status)
+        IDLE: begin
+            request_busy = 1'h0;
+            if (request_valid && !request_we) begin
+                t_begin = 1'h1;
+                nxt_status = SEND;
+            end
+            else begin
+                nxt_status = IDLE;
+            end
+        end
+        SEND: begin
+            request_busy = 1'h1;
+            respond_valid = 1'h1;
+            respond_data = 16'h0;
+            if (t == 3'h0) begin
+                nxt_status = IDLE;
+            end
+            else begin
+                nxt_status = SEND;
+            end
+        end
+        default: ;
+    endcase
+end
 
 endmodule

@@ -28,21 +28,21 @@ module uncore (
     output reg         i_core_respond_valid,
     output reg [31:0]  i_core_respond_data,
 
-    // sdram 通信
+    // ram 通信
     input              d_ram_request_busy,
     input              d_ram_respond_valid,
     input      [15:0]  d_ram_respond_data,
     output reg         d_ram_request_valid,
     output reg         d_ram_request_we,
     output reg [15:0]  d_ram_request_be,
-    output reg [32:0]  d_ram_request_addr,
+    output reg [31:0]  d_ram_request_addr,
     output reg [127:0] d_ram_request_data,
 
     input              i_ram_request_busy,
     input              i_ram_respond_valid,
     input      [15:0]  i_ram_respond_data,
     output reg         i_ram_request_valid,
-    output reg [32:0]  i_ram_request_addr
+    output reg [31:0]  i_ram_request_addr
 );
 
 // #region 状态机
@@ -208,7 +208,7 @@ reg  [2:0]   i_tlb_tag_waddr;
 // 组合逻辑接口
 
 
-i_cache_ram i_cache_ram (
+i_cache_ram u_i_cache_ram (
     .clk  (clk),
     .rst_n(rst_n),
 
@@ -776,7 +776,7 @@ task automatic i_core_respond(
 endtask
 
 task automatic i_ram_request(
-    input [32:0] paddr
+    input [31:0] paddr
 );
     i_ram_request_valid = 1'h1;
     i_ram_request_addr = paddr;
@@ -891,7 +891,7 @@ endtask
 task automatic d_ram_request(
     input         we,
     input [15:0]  be,
-    input [32:0]  paddr,
+    input [31:0]  paddr,
     input [127:0] data
 );
     d_ram_request_valid = 1'h1;
@@ -1022,10 +1022,10 @@ always @(*) begin
     d_ram_request_valid = 1'h0;
     d_ram_request_we    = 1'h0;
     d_ram_request_be    = 16'h0;
-    d_ram_request_addr  = 33'h0;
+    d_ram_request_addr  = 32'h0;
     d_ram_request_data  = 128'h0;
     i_ram_request_valid = 1'h0;
-    i_ram_request_addr  = 33'h0;
+    i_ram_request_addr  = 32'h0;
 
     i1_next_status = I1_IDLE;
     i2_next_status = I2_JUDGE1;
@@ -1385,7 +1385,7 @@ always @(*) begin
                 d_ram_request(
                     1'h0,
                     16'h0,
-                    {d_satp[21:0], d_vaddr[29:22], 3'h0},
+                    {d_satp[21:0], d_vaddr[29:22], 2'h0},
                     128'h0
                 );
             end
@@ -1429,7 +1429,7 @@ always @(*) begin
                 d_ram_request(
                     1'h0,
                     16'h0,
-                    {d_pwc_out[31:10], d_vaddr[19:12], 3'h0},
+                    {d_pwc_out[31:10], d_vaddr[19:12], 2'h0},
                     128'h0
                 );
             end
@@ -1501,7 +1501,7 @@ always @(*) begin
                 d_ram_request(
                     1'h0,
                     16'h0,
-                    {d_pte_paddr, 1'h0},
+                    d_pte_paddr,
                     128'h0
                 );
             end
@@ -1530,7 +1530,7 @@ always @(*) begin
                 d_ram_request(
                     1'h1,
                     16'hf << {d_pte_paddr[1:0], 2'h0},
-                    {d_pte_paddr[31:2], 3'h0},
+                    {d_pte_paddr[31:2], 2'h0},
                     {4{replace_ad(1'h1, d_set_d, {d_high_word, d_low_word})}}
                 );
                 d_next_status = D_UPDATE;
@@ -1549,7 +1549,7 @@ always @(*) begin
                 d_ram_request(
                     1'h1,
                     16'hffff,
-                    {d_cache_tag_out[d_ptr][24:1], d_paddr[7:2], 3'h0},
+                    {d_cache_tag_out[d_ptr][24:1], d_paddr[7:2], 2'h0},
                     d_cache_line_out[d_ptr]
                 );
             end
@@ -1563,7 +1563,7 @@ always @(*) begin
                 d_ram_request(
                     1'h0,
                     16'h0,
-                    {d_paddr, 1'h0},
+                    d_paddr,
                     128'h0
                 );
             end
@@ -1650,7 +1650,7 @@ always @(*) begin
                     d_ram_request(
                         1'h1,
                         {12'h0, d_be} << {d_paddr[1:0], 2'h0},
-                        {d_paddr[31:2], 3'h0},
+                        {d_paddr[31:2], 2'h0},
                         {4{d_data}}
                     );
                 end
@@ -1659,7 +1659,7 @@ always @(*) begin
                     d_ram_request(
                         1'h0,
                         16'h0,
-                        {d_paddr, 1'h0},
+                        d_paddr,
                         128'h0
                     );
                 end
@@ -1712,7 +1712,7 @@ always @(*) begin
                 d_ram_request(
                     1'h0,
                     16'h0,
-                    {i_pte_paddr, 1'h0},
+                    i_pte_paddr,
                     128'h0
                 );
             end
@@ -1741,7 +1741,7 @@ always @(*) begin
                 d_ram_request(
                     1'h1,
                     16'hf << {i_pte_paddr[1:0], 2'h0},
-                    {i_pte_paddr[31:2], 3'h0},
+                    {i_pte_paddr[31:2], 2'h0},
                     {4{replace_ad(1'h1, 1'h0, {d_high_word, d_low_word})}}
                 );
                 d_finish_i = 1'h1;
@@ -1779,7 +1779,12 @@ always @(*) begin
             end
             else if (!d_ram_request_busy) begin
                 f_add = 1'h1;
-                d_ram_request(1'h1, 16'hffff, {d_cache_tag_out[f_t[1:0]][24:1], f_t[7:2], 3'h0}, d_cache_line_out[f_t[1:0]]);
+                d_ram_request(
+                    1'h1,
+                    16'hffff,
+                    {d_cache_tag_out[f_t[1:0]][24:1], f_t[7:2], 2'h0},
+                    d_cache_line_out[f_t[1:0]]
+                );
             end
             if (f_t[1:0] == 2'h3 && f_add) begin
                 if (f_t[7:2] == 6'h3f) begin
@@ -1951,7 +1956,7 @@ always @(*) begin
             if (!i_ram_request_busy) begin
                 i2_next_status = I2_PWC_GET;
                 i_ram_request(
-                    {i_satp[21:0], i_vaddr[29:22], 3'h0}
+                    {i_satp[21:0], i_vaddr[29:22], 2'h0}
                 );
             end
             else begin
@@ -1993,7 +1998,7 @@ always @(*) begin
             if (!i_ram_request_busy) begin
                 i2_next_status = I2_TLB_GET;
                 i_ram_request(
-                    {i_pwc_out[31:10], i_vaddr[19:12], 3'h0}
+                    {i_pwc_out[31:10], i_vaddr[19:12], 2'h0}
                 );
             end
             else begin
@@ -2064,7 +2069,7 @@ always @(*) begin
             if (!i_ram_request_busy) begin
                 i2_next_status = I2_CACHE_GET;
                 i_ram_request(
-                    {i_paddr, 1'h0}
+                    i_paddr
                 );
             end
             else begin

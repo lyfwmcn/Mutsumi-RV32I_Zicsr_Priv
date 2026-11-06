@@ -17,8 +17,12 @@ end
 always @(posedge clk) begin
     if (!rst_n) begin
         if (locked) begin
-            if (t == 10'h3ff) rst_n <= 1'h1;
-            else              t     <= t + 10'h1;
+            if (t == 10'h3ff) begin
+                rst_n <= 1'h1;
+            end
+            else begin
+                t <= t + 10'h1;
+            end
         end
         else begin
             t <= 10'h0;

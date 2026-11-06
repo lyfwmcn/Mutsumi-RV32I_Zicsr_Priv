@@ -7,7 +7,7 @@ module boot_rom (
     input              request_valid,
     input              request_we,
     input      [15:0]  request_be,
-    input      [10:0]  request_addr,
+    input      [31:0]  request_addr,
     input      [127:0] request_data,
     output reg         request_busy,
     output reg         respond_valid,
@@ -44,11 +44,11 @@ reg push;
 // 组合逻辑接口
 
 
-reg [10:0] p_request_addr;
+reg [9:0] p_request_addr;
 
 always @(posedge clk) begin
     if (push) begin
-        p_request_addr <= request_addr;
+        p_request_addr <= request_addr[9:0];
     end
 end
 // #endregion
@@ -136,11 +136,11 @@ always @(*) begin
             nxt_status = RUN;
             t_begin = 1'h1;
             re = 1'h1;
-            addr = p_request_addr[10:3];
+            addr = p_request_addr[9:2];
         end
         RUN: begin
             nxt_respond_valid = 1'h1;
-            nxt_respond_data = line_out[{p_request_addr[2:0] + t, 4'h0} +: 16];
+            nxt_respond_data = line_out[{{p_request_addr[1:0], 1'h0} + t, 4'h0} +: 16];
             if (t == 3'h7) begin
                 nxt_status = IDLE;
             end

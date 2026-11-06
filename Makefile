@@ -57,8 +57,16 @@ $(SYNBIT): $(SYNCONFIG)
 
 # 综合 + 布线 + 打包，然后把 bit 流拷到 iCELink 盘（自动烧写）
 synth: $(SYNBIT)
-	@set -e; D=$$(find /run/media/$$USER -maxdepth 1 -name iCELink 2>/dev/null | head -1); \
-	if [ -z "$$D" ]; then echo "iCELink 盘未挂载，请先挂载后再 make synth"; exit 1; fi; \
+	@set -e; \
+	D=$$(find /run/media/$$USER -maxdepth 1 -name iCELink 2>/dev/null | head -1); \
+	if [ -z "$$D" ]; then \
+		udisksctl mount -b /dev/sda >/dev/null; \
+		D=$$(find /run/media/$$USER -maxdepth 1 -name iCELink 2>/dev/null | head -1); \
+	fi; \
+	if [ -z "$$D" ]; then \
+		echo "iCELink 盘未挂载，请先挂载后再 make synth"; \
+		exit 1; \
+	fi; \
 	cp $(SYNBIT) $$D/ && sync && echo "已复制到 $$D，固件自动烧写中…"
 
 

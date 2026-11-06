@@ -9,29 +9,30 @@ module core (
     input         timer_interrupt_clear,
     input         timer_interrupt_set,
 
-    // 页表基址：经 trap_csr_bypass，M2 写 satp 的下一拍就是新值
-    output [31:0] satp,
     // 当前特权级（privilege_mode 的输出，直接给 MMU 用）
     output [1:0]  privilege,
+    // 页表基址：经 trap_csr_bypass，M2 写 satp 的下一拍就是新值
+    output [31:0] satp,
 
-    input         d_core_respond_access_fault,
-    input         i_core_respond_access_fault,
-    input         d_core_respond_page_fault,
-    input         i_core_respond_page_fault,
-    input         d_core_respond_valid,
-    input         i_core_respond_valid,
-    input  [31:0] d_core_respond_data,
-    input  [31:0] i_core_respond_data,
-    // cache 忙标志：valid && !busy 才算请求被接受
     input         d_core_request_busy,
-    input         i_core_request_busy,
+    input         d_core_respond_access_fault,
+    input         d_core_respond_page_fault,
+    input         d_core_respond_valid,
+    input  [31:0] d_core_respond_data,
     output        d_core_request_valid,
-    output        i_core_request_valid,
     output [1:0]  d_core_request_op,
     output [3:0]  d_core_request_be,
     output [29:0] d_core_request_addr,
-    output [29:0] i_core_request_addr,
-    output [31:0] d_core_request_data
+    output [31:0] d_core_request_data,
+
+    input         i_core_request_busy,
+    input         i_core_respond_access_fault,
+    input         i_core_respond_page_fault,
+    input         i_core_respond_valid,
+    input  [31:0] i_core_respond_data,
+    // cache 忙标志：valid && !busy 才算请求被接受
+    output        i_core_request_valid,
+    output [29:0] i_core_request_addr
 );
 
 // ========================= 流水线控制 =========================

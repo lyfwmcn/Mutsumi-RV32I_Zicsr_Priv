@@ -1,26 +1,16 @@
 `timescale 1ns / 1ns
 
-// UART 发送单元（设备总线从机，接口与 boot_rom / sdram_ctr / null_device 一致）
-//
-// 行为：
-//   - 读（request_we = 0）：连续 8 拍返回 0（respond_valid 高 8 拍，respond_data = 16'h0000）
-//   - 写（request_we = 1）：在 request_be[15:0] 里找**第一个**（下标最小的）为 1 的字节，
-//                          取 request_data 里对应的那个字节，用 8N1（起始位 0 + 8 位数据 + 停止位 1）
-//                          从 tx 发出去；先发 LSB
-//   - request_busy 在整段操作期间保持 1：读 8 拍 / 写的 10 个位时间
-//   - 写没有响应（与 sdram 控制器的写口一致）；be == 0 时不发送，直接结束
-//
-// 注：原接口里的 valid / data 输入输出同名，无法同时存在，故用 request_* / respond_* 前缀区分。
 module uart_tx_unit #(
     parameter DIV = 50_000_000 / 115_200
 ) (
-    input         clk,
-    input         rst_n,
+    input              clk,
+    input              rst_n,
 
     // 设备总线请求
     input              request_valid,
     input              request_we,
     input      [15:0]  request_be,
+    input      [31:0]  request_addr,
     input      [127:0] request_data,
 
     // 设备总线响应
@@ -29,123 +19,216 @@ module uart_tx_unit #(
     output reg [15:0]  respond_data,
 
     // uart 物理引脚
-    output             tx
+    output reg         tx
 );
 
-localparam IDLE = 2'h0;
-localparam RD   = 2'h1; // 读：连续 8 拍返回 0
-localparam SEND = 2'h2; // 写：把选中的字节串出去
+// #region 请求缓存
+reg push;
+reg finish;
+// 组合逻辑接口
 
-reg [1:0]  state;
-reg [31:0] clk_cnt;
-reg [3:0]  tx_idx;
-reg [9:0]  tx_buf;
-reg [2:0]  rd_cnt;
 
-// 从 16 字节里找第一个 be = 1 的字节（be[0] 优先级最高）
-integer i;
-reg [3:0] byte_idx;
-reg       byte_found;
-reg [7:0] byte_sel;
-always @(*) begin
-    byte_idx   = 4'h0;
-    byte_found = 1'h0;
+reg [15:0]  p_be;
+reg [127:0] p_data;
+
+reg       byte_valid;
+reg [3:0] byte_index;
+
+always @(*) begin : ind
+    integer i;
+    byte_valid = 1'h0;
+    byte_index = 4'h0;
     for (i = 15; i >= 0; i = i - 1) begin
-        if (request_be[i]) begin
-            byte_idx   = i[3:0]; // 从高往低扫，最后赋值 = 下标最小的 1
-            byte_found = 1'h1;
+        if (p_be[i]) begin
+            byte_valid = 1'h1;
+            byte_index = i[3:0];
         end
     end
 end
 
-// 显式的 16:1 字节选择（写成 case 而不是变量部分选择，否则会被综合成桶形移位器）
-always @(*) begin
-    case (byte_idx)
-        4'd0:    byte_sel = request_data[7:0];
-        4'd1:    byte_sel = request_data[15:8];
-        4'd2:    byte_sel = request_data[23:16];
-        4'd3:    byte_sel = request_data[31:24];
-        4'd4:    byte_sel = request_data[39:32];
-        4'd5:    byte_sel = request_data[47:40];
-        4'd6:    byte_sel = request_data[55:48];
-        4'd7:    byte_sel = request_data[63:56];
-        4'd8:    byte_sel = request_data[71:64];
-        4'd9:    byte_sel = request_data[79:72];
-        4'd10:   byte_sel = request_data[87:80];
-        4'd11:   byte_sel = request_data[95:88];
-        4'd12:   byte_sel = request_data[103:96];
-        4'd13:   byte_sel = request_data[111:104];
-        4'd14:   byte_sel = request_data[119:112];
-        default: byte_sel = request_data[127:120];
-    endcase
+always @(posedge clk) begin
+    if (push) begin
+        p_be <= request_be;
+        p_data <= request_data;
+    end
+    else if (finish) begin
+        p_be[byte_index] <= 1'h0;
+    end
 end
+// #endregion
 
-always @(*) begin
-    request_busy = (state != IDLE);
-    respond_valid = (state == RD);
-    respond_data  = 16'h0000;
-end
-assign tx = tx_buf[tx_idx];
+
+
+// #region 状态机
+reg [2:0] nxt_status;
+
+
+localparam IDLE  = 3'h0;
+localparam READ  = 3'h1;
+localparam SEND0 = 3'h2;
+localparam SEND1 = 3'h3;
+localparam SEND2 = 3'h4;
+reg [2:0] status;
 
 always @(posedge clk or negedge rst_n) begin
     if (!rst_n) begin
-        state   <= IDLE;
-        clk_cnt <= 32'h0;
-        tx_idx  <= 4'h0;
-        tx_buf  <= 10'h3ff;
-        rd_cnt  <= 3'h0;
+        status <= IDLE;
     end
     else begin
-        case (state)
-            IDLE: begin
-                clk_cnt <= 32'h0;
-                tx_idx  <= 4'h0;
-                rd_cnt  <= 3'h0;
-                if (request_valid) begin
-                    if (request_we) begin
-                        if (byte_found) begin
-                            state  <= SEND;
-                            tx_buf <= {1'b1, byte_sel, 1'b0}; // 停止位 + 数据 + 起始位
-                        end
-                        // be == 0：没有要发的字节，直接结束（request_busy 只在这一拍为 1）
-                    end
-                    else begin
-                        state <= RD;
-                    end
-                end
-            end
-
-            // 读：连续 8 拍返回 0（对应一次 BL=8 读突发）
-            RD: begin
-                if (rd_cnt == 3'h7) begin
-                    state <= IDLE;
-                end
-                else begin
-                    rd_cnt <= rd_cnt + 3'h1;
-                end
-            end
-
-            // 写：10 个位时间把 tx_buf 逐位移出
-            SEND: begin
-                if (clk_cnt == DIV - 1) begin
-                    clk_cnt <= 32'h0;
-                    if (tx_idx == 4'h9) begin
-                        state  <= IDLE;
-                        tx_idx <= 4'h0;
-                        tx_buf <= 10'h3ff;
-                    end
-                    else begin
-                        tx_idx <= tx_idx + 4'h1;
-                    end
-                end
-                else begin
-                    clk_cnt <= clk_cnt + 32'h1;
-                end
-            end
-
-            default: ;
-        endcase
+        status <= nxt_status;
     end
+end
+// #endregion
+
+
+
+// #region 计时器
+reg        t0_set;
+reg        t0_dec;
+reg        t1_set;
+
+reg [2:0]  t0;
+reg [31:0] t1;
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        t0 <= 3'h0;
+        t1 <= 32'h1;
+    end
+    else begin
+        if (t0_set) begin
+            t0 <= 3'h7;
+        end
+        else if (t0_dec) begin
+            t0 <= t0 - 3'h1;
+        end
+        if (t1_set) begin
+            t1 <= DIV - 32'h1;
+        end
+        else if (t1 != 32'h0) begin
+            t1 <= t1 - 32'h1;
+        end
+    end
+end
+// #endregion
+
+
+
+// #region 响应缓存
+reg        nxt_respond_valid;
+reg [15:0] nxt_respond_data;
+reg        set_tx;
+reg        nxt_tx;
+// 组合逻辑接口
+
+
+always @(posedge clk or negedge rst_n) begin
+    if (!rst_n) begin
+        respond_valid <= 1'h0;
+        tx <= 1'h1;
+    end
+    else begin
+        respond_valid <= nxt_respond_valid;
+        respond_data <= nxt_respond_data;
+        if (set_tx) begin
+            tx <= nxt_tx;
+        end
+    end
+end
+// #endregion
+
+
+
+always @(*) begin : comb
+    integer i;
+    request_busy = 1'h1;
+    push         = 1'h0;
+    finish       = 1'h0;
+    nxt_status   = IDLE;
+    t0_set       = 1'h0;
+    t0_dec       = 1'h0;
+    t1_set       = 1'h0;
+    nxt_respond_valid = 1'h0;
+    nxt_respond_data  = 16'h0;
+    set_tx            = 1'h0;
+    nxt_tx            = 1'h0;
+
+    case (status)
+        IDLE: begin
+            request_busy = 1'h0;
+            if (request_valid) begin
+                if (request_we) begin
+                    push = 1'h1;
+                    nxt_status = SEND0;
+                end
+                else begin
+                    t0_set = 1'h1;
+                    nxt_status = READ;
+                end
+            end
+            else begin
+                nxt_status = IDLE;
+            end
+        end
+        READ: begin
+            t0_dec = 1'h1;
+            nxt_respond_valid = 1'h1;
+            nxt_respond_data  = 16'h0;
+            if (t0 == 3'h0) begin
+                nxt_status = IDLE;
+            end
+            else begin
+                nxt_status = READ;
+            end
+        end
+        SEND0: begin
+            if (t1 == 32'h0) begin
+                if (byte_valid) begin
+                    set_tx = 1'h1;
+                    nxt_tx = 1'h0;
+                    t0_set = 1'h1;
+                    t1_set = 1'h1;
+                    nxt_status = SEND1;
+                end
+                else begin
+                    nxt_status = IDLE;
+                end
+            end
+            else begin
+                nxt_status = SEND0;
+            end
+        end
+        SEND1: begin
+            if (t1 == 32'h0) begin
+                set_tx = 1'h1;
+                nxt_tx = p_data[{byte_index, ~t0}];
+                t0_dec = 1'h1;
+                t1_set = 1'h1;
+                if (t0 == 3'h0) begin
+                    nxt_status = SEND2;
+                end
+                else begin
+                    nxt_status = SEND1;
+                end
+            end
+            else begin
+                nxt_status = SEND1;
+            end
+        end
+        SEND2: begin
+            if (t1 == 32'h0) begin
+                nxt_status = SEND0;
+                set_tx = 1'h1;
+                nxt_tx = 1'h1;
+                t1_set = 1'h1;
+                finish = 1'h1;
+            end
+            else begin
+                nxt_status = SEND2;
+            end
+        end
+        default: ;
+    endcase
 end
 
 endmodule
