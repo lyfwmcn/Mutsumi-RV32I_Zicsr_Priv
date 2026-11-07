@@ -29,9 +29,10 @@ module instr_buffer_unit (
     output [31:0] pcplus4
 );
 
-// 缓冲区深度（取指未响应深度只有 2，4 项足够吸收 ID 停顿；
-// 从 8 降到 4 省下 660 个 FF 和一半的读选择逻辑）
-localparam integer BUF_DEPTH = 4;
+// 逻辑 FIFO 深度 5；物理数组用 8 项，指针 3 位 mod 8，
+// 这样 write==read 不会和“满”混淆（count 永远 <= 5 < 8）。
+localparam integer BUF_DEPTH = 8;
+localparam [2:0] FIFO_DEPTH = 3'd5;
 
 // 尚未收到响应的请求
 reg [31:0] pending_requests [BUF_DEPTH-1:0];
@@ -61,17 +62,16 @@ wire [2:0] buffer_count;
 // 缓冲区响应数据总量
 assign buffer_count = buffer_write_pos - buffer_read_pos;
 
-// 写条件保证 buffer_count ∈ [0,4]：满 4 ⇔ 低 2 位相等且 bit2 相异
+// 物理数组 8 项，逻辑 FIFO 深度 5；3 位指针 mod 8，count 不会产生满/空歧义
 wire buffer_full;
-assign buffer_full = (buffer_write_pos[1:0] == buffer_read_pos[1:0]) &&
-                     (buffer_write_pos[2]   != buffer_read_pos[2]);
+assign buffer_full = (buffer_count == FIFO_DEPTH);
 
 integer i;
-assign instr_fault = empty ? 1'h0 : instr_fault_buffer[buffer_read_pos[1:0]];
-assign instr_page_fault = empty ? 1'h0 : instr_pf_buffer[buffer_read_pos[1:0]];
-assign instr = empty ? 32'h13 : instr_buffer[buffer_read_pos[1:0]];
-assign pc = empty ? 32'h0 : pc_buffer[buffer_read_pos[1:0]];
-assign pcplus4 = empty ? 32'h4 : pcplus4_buffer[buffer_read_pos[1:0]];
+assign instr_fault = empty ? 1'h0 : instr_fault_buffer[buffer_read_pos[2:0]];
+assign instr_page_fault = empty ? 1'h0 : instr_pf_buffer[buffer_read_pos[2:0]];
+assign instr = empty ? 32'h13 : instr_buffer[buffer_read_pos[2:0]];
+assign pc = empty ? 32'h0 : pc_buffer[buffer_read_pos[2:0]];
+assign pcplus4 = empty ? 32'h4 : pcplus4_buffer[buffer_read_pos[2:0]];
 
 // 是否完成/丢弃一个挂起请求
 wire pending_requests_read;
@@ -88,8 +88,8 @@ wire buffer_flush;
 
 assign pending_requests_read = respond_valid_instr;
 assign request_accept = request_valid_instr && !request_busy_instr;
-// 取指流水深度：未响应请求最多 2 个（与 cache I 侧 i1+i2 的能力匹配）
-localparam [2:0] DEPTH = 3'h2;
+// 取指流水深度：未响应请求最多 5 个
+localparam [2:0] DEPTH = 3'd5;
 
 wire pending_room;
 wire buffer_room;
@@ -101,8 +101,8 @@ assign buffer_room = !buffer_full || buffer_read || !respond_valid_instr;
 assign can_accept = pending_room && buffer_room;
 
 assign empty = buffer_write_pos == buffer_read_pos;
-// full 同时表示“缓冲区满”和“请求深度已到上限”，即不能再发新请求
-assign full = !can_accept || buffer_count + pending_requests_count >= BUF_DEPTH[2:0];
+// full 同时表示“逻辑缓冲满（5 项）”和“请求深度已到上限”，即不能再发新请求
+assign full = !can_accept || ({1'b0, buffer_count} + {1'b0, pending_requests_count} >= {1'b0, FIFO_DEPTH});
 
 // 原式 (!buffer_write && (pr||br)) || (buffer_write && pr && br)
 //   恒等化简为 (pr && !bw) || (br && (!bw || pr))
@@ -144,8 +144,8 @@ always @(posedge clk or negedge rst_n) begin
     end
     else begin
         if (pending_requests_write) begin
-            pending_requests[pending_requests_write_pos[1:0]] <= request_addr_instr;
-            pending_requests_plus4[pending_requests_write_pos[1:0]] <= request_addr_instr_plus4;
+            pending_requests[pending_requests_write_pos[2:0]] <= request_addr_instr;
+            pending_requests_plus4[pending_requests_write_pos[2:0]] <= request_addr_instr_plus4;
             pending_requests_write_pos <= pending_requests_write_pos + 3'h1;
         end
         if (pending_requests_read) begin
@@ -161,11 +161,11 @@ always @(posedge clk or negedge rst_n) begin
                 trash_active <= 1'h0;
             end
             if (buffer_write) begin
-                instr_fault_buffer[buffer_write_pos[1:0]] <= respond_fault_instr;
-                instr_pf_buffer[buffer_write_pos[1:0]] <= respond_page_fault_instr;
-                instr_buffer[buffer_write_pos[1:0]] <= respond_data_instr;
-                pc_buffer[buffer_write_pos[1:0]] <= pending_requests[pending_requests_read_pos[1:0]];
-                pcplus4_buffer[buffer_write_pos[1:0]] <= pending_requests_plus4[pending_requests_read_pos[1:0]];
+                instr_fault_buffer[buffer_write_pos[2:0]] <= respond_fault_instr;
+                instr_pf_buffer[buffer_write_pos[2:0]] <= respond_page_fault_instr;
+                instr_buffer[buffer_write_pos[2:0]] <= respond_data_instr;
+                pc_buffer[buffer_write_pos[2:0]] <= pending_requests[pending_requests_read_pos[2:0]];
+                pcplus4_buffer[buffer_write_pos[2:0]] <= pending_requests_plus4[pending_requests_read_pos[2:0]];
                 buffer_write_pos <= buffer_write_pos + 3'h1;
             end
             if (buffer_read) begin

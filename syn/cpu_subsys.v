@@ -70,35 +70,35 @@ wire        i_req_valid_2;
 wire [31:0] i_req_addr_2;
 
 core u_core (
-    .clk                        (clk),
-    .rst_n                      (rst_n),
+    .clk                          (clk),
+    .rst_n                        (rst_n),
 
-    .external_interrupt_clear   (external_interrupt_clear),
-    .external_interrupt_set     (external_interrupt_set),
-    .timer_interrupt_clear      (timer_interrupt_clear),
-    .timer_interrupt_set        (timer_interrupt_set),
+    .external_interrupt_clear     (external_interrupt_clear),
+    .external_interrupt_set       (external_interrupt_set),
+    .timer_interrupt_clear        (timer_interrupt_clear),
+    .timer_interrupt_set          (timer_interrupt_set),
 
-    .privilege                  (privilege),
-    .satp                       (satp),
+    .privilege                    (privilege),
+    .satp                         (satp),
 
-    .d_core_request_busy        (d_req_busy_1),
-    .d_core_respond_access_fault(d_res_af_1),
-    .d_core_respond_page_fault  (d_res_pf_1),
-    .d_core_respond_valid       (d_res_valid_1),
-    .d_core_respond_data        (d_res_data_1),
-    .d_core_request_valid       (d_req_valid_1),
-    .d_core_request_op          (d_req_op_1),
-    .d_core_request_be          (d_req_be_1),
-    .d_core_request_addr        (d_req_addr_1),
-    .d_core_request_data        (d_req_data_1),
+    .d_uncore_request_busy        (d_req_busy_1),
+    .d_uncore_respond_access_fault(d_res_af_1),
+    .d_uncore_respond_page_fault  (d_res_pf_1),
+    .d_uncore_respond_valid       (d_res_valid_1),
+    .d_uncore_respond_data        (d_res_data_1),
+    .d_uncore_request_valid       (d_req_valid_1),
+    .d_uncore_request_op          (d_req_op_1),
+    .d_uncore_request_be          (d_req_be_1),
+    .d_uncore_request_addr        (d_req_addr_1),
+    .d_uncore_request_data        (d_req_data_1),
 
-    .i_core_request_busy        (i_req_busy_1),
-    .i_core_respond_access_fault(i_res_af_1),
-    .i_core_respond_page_fault  (i_res_pf_1),
-    .i_core_respond_valid       (i_res_valid_1),
-    .i_core_respond_data        (i_res_data_1),
-    .i_core_request_valid       (i_req_valid_1),
-    .i_core_request_addr        (i_req_addr_1)
+    .i_uncore_request_busy        (i_req_busy_1),
+    .i_uncore_respond_access_fault(i_res_af_1),
+    .i_uncore_respond_page_fault  (i_res_pf_1),
+    .i_uncore_respond_valid       (i_res_valid_1),
+    .i_uncore_respond_data        (i_res_data_1),
+    .i_uncore_request_valid       (i_req_valid_1),
+    .i_uncore_request_addr        (i_req_addr_1)
 );
 
 uncore u_uncore (
