@@ -20,13 +20,8 @@ assign reg_out_b = rs2 == 5'h0 ? 32'h0 : regs[rs2];
 
 integer i;
 
-always @(posedge clk or negedge rst_n) begin
-    if (!rst_n) begin
-        for (i = 1; i < 32; i = i + 1) begin
-            regs[i] <= 32'h0;
-        end
-    end
-    else if (reg_wr == 1'h1 && rd > 5'h0) begin
+always @(posedge clk) begin
+    if (reg_wr == 1'h1 && rd > 5'h0) begin
         regs[rd] <= reg_in;
     end
 end

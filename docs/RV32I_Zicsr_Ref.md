@@ -138,6 +138,11 @@
 |   mcause   | 342  |
 |   mtval    | 343  |
 |    mip     | 344  |
+|  pmpcfg0   | 3A0  |
+|  pmpaddr0  | 3B0  |
+|  pmpaddr1  | 3B1  |
+|  pmpaddr2  | 3B2  |
+|  pmpaddr3  | 3B3  |
 |   mcycle   | B00  |
 |  minstret  | B02  |
 |  mcycleh   | B80  |
@@ -210,8 +215,8 @@
 * 中断或异常的附加信息
 ## mscratch/sscratch
 * 对应态中间寄存器
-## pmpcfg0-pmpcfg3
-* 编址 0x3A0-0x3A3
+## pmpcfg0
+* 编址 0x3A0
 * pmpcfg 包含 4 个 8 位的控制块
 * 控制块结构：
 
@@ -230,8 +235,8 @@
 |  01  |  TOR  | Top of Range                   | pmpaddr[i - 1] << 2 ~ pmpaddr[i] << 2 - 1                                          |
 |  10  |  NA4  | Naturally Aligned 4-Byte       | pmpaddr[i] << 2 ~ pmpaddr[i] << 2 + 3                                              |
 |  11  | NAPOT | Naturally Aligned Power-of-Two | startaddr = pmpaddr[i] 清除尾部连续 1 后左移 2，大小 = 2 ^ (尾部连续 1 的个数 + 3) |
-## pmpaddr0-pmpaddr15
-* 编址 0x3B0-0x3BF
+## pmpaddr0-pmpaddr3
+* 编址 0x3B0-0x3B3
 ## misa
 |  bit  |    name    |  function   |
 | :---: | :--------: | :---------: |
