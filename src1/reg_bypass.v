@@ -1,6 +1,5 @@
 `timescale 1ns / 1ns
 
-// 7.1 ns
 module reg_bypass (
     input         id_reg_out_a_used,
     input         id_reg_out_b_used,

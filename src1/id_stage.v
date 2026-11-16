@@ -10,17 +10,17 @@ module id_stage (
     input             TVM,
     input             TW,
     input      [1:0]  privilege,
+    output            id_jump,
     output            id_wait,
+    output     [30:0] id_jump_addr,
 
     // 旁路参数
     input      [31:0] id_csr_out,
     input      [31:0] id_reg_out_a,
     input      [31:0] id_reg_out_b,
-    output            id_jump,
     output     [4:0]  id_rs1,
     output     [4:0]  id_rs2,
     output     [11:0] id_csr_rd,
-    output     [30:0] id_jump_addr,
 
     input             me_is_instr,
     input             me_reg_wr,
@@ -195,7 +195,7 @@ csr_hazard u_csr_hazard (
     .me_is_instr(me_is_instr),
     .wb_is_instr(wb_is_instr),
 
-    .csr_wait (csr_wait)
+    .csr_wait   (csr_wait)
 );
 
 always @(posedge clk or negedge rst_n) begin
