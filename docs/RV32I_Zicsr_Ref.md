@@ -121,11 +121,14 @@
 |  sstatus   | 100  |
 |    sie     | 104  |
 |   stvec    | 105  |
+| scounteren | 106  |
 |  sscratch  | 140  |
 |    sepc    | 141  |
 |   scause   | 142  |
 |   stval    | 143  |
 |    sip     | 144  |
+|  stimecmp  | 14D  |
+| stimecmph  | 15D  |
 |    satp    | 180  |
 |  mstatus   | 300  |
 |    misa    | 301  |
@@ -133,6 +136,8 @@
 |  mideleg   | 303  |
 |    mie     | 304  |
 |   mtvec    | 305  |
+| mcounteren | 306  |
+|  mstatush  | 310  |
 |  mscratch  | 340  |
 |    mepc    | 341  |
 |   mcause   | 342  |
@@ -147,6 +152,15 @@
 |  minstret  | B02  |
 |  mcycleh   | B80  |
 | minstreth  | B82  |
+|   cycle    | C00  |
+|    time    | C01  |
+|  instret   | C02  |
+|   cycleh   | C80  |
+|   timeh    | C81  |
+|  instreth  | C82  |
+| mvendorid  | F11  |
+|  marchid   | F12  |
+|   mimpid   | F13  |
 |  mhartid   | F14  |
 ## mstatus/sstatus
 |  bit  | name |              function                | sstatus | Read-Only |
@@ -178,6 +192,13 @@
 * TW：控制是否禁止 S 态无休止等待中断
 * TSR：控制是否禁止 S 态返回 U 态
 * FS/XS/SD：记录对应寄存器是否变化
+## mcounteren/scounteren
+| bit | name |                       function                       |
+| :-: | :--: | :--------------------------------------------------: |
+|  0  |  CY  | cycle/cycleh                                         |
+|  1  |  TM  | time/timeh (stimecmp/stimecmph 也受 mcounteren 控制) |
+|  2  |  IR  | instret/instreth                                     |
+* S 受 mcounteren 控制，U 受 mcounteren/scounteren 控制
 ## mie/sie
 | bit | name |               function               | sie | Read-Only |
 | :-: | :--: | :----------------------------------: | :-: | :-------: |
