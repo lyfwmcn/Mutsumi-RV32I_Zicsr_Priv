@@ -1,18 +1,15 @@
 `timescale 1ns / 1ns
 
-module pma_pmp (
-    input      [31:0]  pmpcfg0,
+module d_paddr_check (
+    input      [1:0]   eff_privilege,
     input      [31:0]  pmpaddr0,
     input      [31:0]  pmpaddr1,
     input      [31:0]  pmpaddr2,
     input      [31:0]  pmpaddr3,
-    input      [1:0]   _privilege,
+    input      [31:0]  pmpcfg0,
 
     input              op,
-
     input              tlb_pwc_fill,
-    // input              fill_src, // 0: tlb 1: pwc
-    input              page_fault,
     input      [31:0]  paddr,
     output reg         access_fault,
     output reg         cached
@@ -67,13 +64,13 @@ function automatic pmp_fit;
 endfunction
 
 wire _op = tlb_pwc_fill ? 1'h0 : op;
-wire [1:0] __privilege = tlb_pwc_fill ? 2'h1 : _privilege;
+wire [1:0] _eff_privilege = tlb_pwc_fill ? 2'h1 : eff_privilege;
 
-wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, __privilege, pmpcfg0[7:0]  ) :
-           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(_op, __privilege, pmpcfg0[15:8] ) :
-           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(_op, __privilege, pmpcfg0[23:16]) :
-           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(_op, __privilege, pmpcfg0[31:24]) :
-           __privilege == 2'h3;
+wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, _eff_privilege, pmpcfg0[7:0]  ) :
+           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(_op, _eff_privilege, pmpcfg0[15:8] ) :
+           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(_op, _eff_privilege, pmpcfg0[23:16]) :
+           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(_op, _eff_privilege, pmpcfg0[31:24]) :
+           _eff_privilege == 2'h3;
 
 always @(*) begin
     access_fault = 1'h0;
