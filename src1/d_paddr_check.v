@@ -1,7 +1,9 @@
 `timescale 1ns / 1ns
 
 module d_paddr_check (
-    input      [1:0]   eff_privilege,
+    input              clk,
+
+    input      [1:0]   privilege,
     input      [31:0]  pmpaddr0,
     input      [31:0]  pmpaddr1,
     input      [31:0]  pmpaddr2,
@@ -64,38 +66,38 @@ function automatic pmp_fit;
 endfunction
 
 wire _op = tlb_pwc_fill ? 1'h0 : op;
-wire [1:0] _eff_privilege = tlb_pwc_fill ? 2'h1 : eff_privilege;
+wire [1:0] _privilege = tlb_pwc_fill ? 2'h1 : privilege;
 
-wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, _eff_privilege, pmpcfg0[7:0]  ) :
-           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(_op, _eff_privilege, pmpcfg0[15:8] ) :
-           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(_op, _eff_privilege, pmpcfg0[23:16]) :
-           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(_op, _eff_privilege, pmpcfg0[31:24]) :
-           _eff_privilege == 2'h3;
+wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, _privilege, pmpcfg0[7:0]  ) :
+           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(_op, _privilege, pmpcfg0[15:8] ) :
+           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(_op, _privilege, pmpcfg0[23:16]) :
+           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(_op, _privilege, pmpcfg0[31:24]) :
+           _privilege == 2'h3;
 
-always @(*) begin
-    access_fault = 1'h0;
-    cached       = 1'h1;
+always @(posedge clk) begin
+    access_fault <= 1'h0;
+    cached       <= 1'h1;
     if (!pmp) begin
-        access_fault = 1'h1;
+        access_fault <= 1'h1;
     end
     else begin
         case (pma(paddr))
             2'h0: begin
                 // 未映射
-                access_fault = 1'h1;
+                access_fault <= 1'h1;
             end
             2'h1: begin
                 // 可缓存
-                cached = 1'h1;
+                cached <= 1'h1;
             end
             default: begin
                 // 正常访问不可缓存
                 // 走表作未映射
                 if (tlb_pwc_fill) begin
-                    access_fault = 1'h1;
+                    access_fault <= 1'h1;
                 end
                 else begin
-                    cached = 1'h0;
+                    cached <= 1'h0;
                 end
             end
         endcase
