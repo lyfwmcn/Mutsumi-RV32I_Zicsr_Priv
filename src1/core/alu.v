@@ -1,0 +1,62 @@
+`timescale 1ns / 1ns
+
+// 8.7 ns
+// 需保证 alu_ctr[3:0]: 4'h0-4'h8, 4'hd
+module alu (
+    input  [3:0]  alu_ctr,
+    input  [31:0] alu_in_a,
+    input  [31:0] alu_in_b,
+    output        zf,
+    output        cf,
+    output        sf,
+    output        of,
+    output [31:0] alu_out
+);
+
+wire [31:0] result [7:0];
+
+wire sub;
+assign sub = alu_ctr[3];
+
+// 纯加法链：操作数与 sub 无关，尽早开算（sub 的高扇出不再进进位链）
+wire [32:0] add_ext;
+assign add_ext = {1'b0, alu_in_a} + {1'b0, alu_in_b};
+
+// 有符号/无符号比较、以及减法共用同一条链：a - b
+wire [32:0] diff_ext;
+assign diff_ext = {1'b0, alu_in_a} + {1'b0, ~alu_in_b} + 33'h1;
+wire [31:0] diff;
+assign diff = diff_ext[31:0];
+wire borrow;
+assign borrow = ~diff_ext[32];
+
+// result[0]：加法选 add_ext，减法直接复用 diff
+wire [31:0] sum;
+assign sum = sub ? diff : add_ext[31:0];
+
+wire sltu;
+assign sltu = borrow;
+wire slt;
+assign slt = (alu_in_a[31] ^ alu_in_b[31]) ? alu_in_a[31] : diff[31];
+
+assign result[0] = sum;
+assign result[1] = alu_in_a << alu_in_b[4:0];
+assign result[2] = {31'h0, slt};
+assign result[3] = {31'h0, sltu};
+assign result[4] = alu_in_a ^ alu_in_b;
+assign result[5] = sub == 1'h0 ? alu_in_a >> alu_in_b[4:0] : $unsigned($signed(alu_in_a) >>> alu_in_b[4:0]);
+assign result[6] = alu_in_a | alu_in_b;
+assign result[7] = alu_in_a & alu_in_b;
+
+assign zf = sum == 32'h0;
+// 无符号比较直接用 a-b 的借位；减法没有借位（a>=b）时 borrow=0。
+assign cf = sub ? borrow : add_ext[32];
+assign sf = sum[31];
+// 与原 of 完全等价：原式用 _alu_in_b[31]（即 (~alu_in_b + 1) 的 MSB）。
+// 这里用 31 位或归约推导该 MSB：sub 时 MSB(~x+1) = x[31] ^ |x[30:0]。
+wire c31;
+assign c31 = alu_in_b[31] ^ (sub & (|alu_in_b[30:0]));
+assign of = (alu_in_a[31] & c31 & ~sum[31]) | (~alu_in_a[31] & ~c31 & sum[31]);
+assign alu_out = result[alu_ctr[2:0]];
+
+endmodule
