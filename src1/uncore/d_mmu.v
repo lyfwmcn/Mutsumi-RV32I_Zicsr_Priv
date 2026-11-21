@@ -1,14 +1,25 @@
 `timescale 1ns / 1ns
 
-module uncore (
+/**
+ * 接口说明：
+ * d_core_request_op:      0: R  1: W  2: sfence.vma  3: fence.i
+ * d_core_request_f_by_va: (S   valid) vaddr 是否有效
+ * d_core_request_sel:     (W   valid) 字节使能
+ * d_core_request_vaddr:   (RWS valid) vaddr[31:2]
+ * d_core_request_data:    (W   valid) 写入数据
+ * d_core_respond_a_fault: (RW  valid) access fault
+ * d_core_respond_p_fault: (RW  valid) page fault
+ * d_core_respond_data:    (R   valid) 读出数据
+ */
+module d_mmu (
     input              clk,
     input              rst_n,
 
+    // 第一周期
     input              MPRV,
     input              MXR,
     input              SUM,
     input      [1:0]   MPP,
-
     input      [1:0]   privilege,
     input      [31:0]  pmpaddr0,
     input      [31:0]  pmpaddr1,
@@ -17,44 +28,25 @@ module uncore (
     input      [31:0]  pmpcfg0,
     input      [31:0]  satp,
 
+    // 第一周期
     input      [1:0]   d_core_request_op,
-    // 0: R  1: W  2: sfence.vma  3: fence.i
-    input      [3:0]   d_core_request_be,    // [0] 在 op = 2 意为 vaddr 是否有效
-    input      [29:0]  d_core_request_vaddr, // 高 30 位虚拟地址
+    input              d_core_request_f_by_va,
+    input      [3:0]   d_core_request_sel,
+    input      [29:0]  d_core_request_vaddr,
     input      [31:0]  d_core_request_data,
     output reg         d_core_request_busy,
 
+    // 第三周期
     input              d_core_request_valid,
-    output reg         d_core_respond_flush,
-    output reg         d_core_respond_access_fault,
-    output reg         d_core_respond_page_fault,
     output reg         d_core_respond_valid,
+    output reg         d_core_respond_flush,
+    output reg         d_core_respond_a_fault,
+    output reg         d_core_respond_p_fault,
     output reg [31:0]  d_core_respond_data,
 
-    input              i_core_request_valid,
-    input      [29:0]  i_core_request_vaddr, // 高 30 位虚拟地址
-    output reg         i_core_request_busy,
-
-    output reg         i_core_respond_access_fault,
-    output reg         i_core_respond_page_fault,
-    output reg         i_core_respond_valid,
-    output reg [31:0]  i_core_respond_data,
-
-    // ram 通信
-    input              d_ram_request_busy,
-    input              d_ram_respond_valid,
-    input      [15:0]  d_ram_respond_data,
-    output reg         d_ram_request_valid,
-    output reg         d_ram_request_we,
-    output reg [15:0]  d_ram_request_be,
-    output reg [31:0]  d_ram_request_addr,
-    output reg [127:0] d_ram_request_data,
-
-    input              i_ram_request_busy,
-    input              i_ram_respond_valid,
-    input      [15:0]  i_ram_respond_data,
-    output reg         i_ram_request_valid,
-    output reg [31:0]  i_ram_request_addr
+    // i-mmu 通信
+    input              i_mmu_respond_done,
+    output             i_mmu_request_flush
 );
 
 wire        s1_tlb_pwc_fill;
@@ -156,7 +148,7 @@ reg d_cache_src;
 reg [2:0] nxt_status;
 
 localparam IDLE   = 3'h0; // 处理普通读写和不缓存读写
-localparam D_WAIT = 3'h1; // 
+localparam D_WAIT = 3'h1; //
 
 reg [2:0] status;
 always @(posedge clk or negedge rst_n) begin
@@ -173,7 +165,6 @@ always @(*) begin
     case (status)
         IDLE: begin
             if (d_core_request_valid) begin
-                
             end
         end
         default: ;

@@ -2,13 +2,13 @@
 
 /**
  * 接口说明：
- * d_mmu_request_op:        0: R  1: W  2: ALL_WRITE_BACK
- * d_mmu_request_sel:       (W  valid) 字节使能
- * d_mmu_request_paddr_lo:  (RW valid) paddr[11:2]
- * d_mmu_request_data:      (W  valid) 写入数据
- * d_mmu_request_paddr_hi:  (RW valid) paddr[33:12]
- * d_mmu_request_cacheable: (RW valid) 读写是否可缓存
- * d_mmu_respond_data:      (R  valid) 读出数据
+ * d_mmu_request_op:       0: R  1: W  2: ALL_WRITE_BACK
+ * d_mmu_request_sel:      (W  valid) 字节使能
+ * d_mmu_request_paddr_lo: (RW valid) paddr[11:2]
+ * d_mmu_request_data:     (W  valid) 写入数据
+ * d_mmu_request_paddr_hi: (RW valid) paddr[33:12]
+ * d_mmu_request_cache:    (RW valid) 读写是否可缓存
+ * d_mmu_respond_data:     (R  valid) 读出数据
  */
 module d_cache (
     input              clk,
@@ -25,7 +25,7 @@ module d_cache (
 
     // 第三周期
     input              d_mmu_request_valid,
-    input              d_mmu_request_cacheable,
+    input              d_mmu_request_cache,
     output             d_mmu_respond_valid,
     output             d_mmu_respond_flush,
     output     [31:0]  d_mmu_respond_data,
