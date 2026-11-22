@@ -91,6 +91,11 @@ d_cache u_d_cache (
     .i_cache_respond_done   (),
     .i_cache_request_flush  (),
 
+    .i_mmu_request_valid    (),
+    .i_mmu_request_paddr    (),
+    .i_mmu_respond_valid    (),
+    .i_mmu_respond_data     (),
+
     .d_ram_request_busy     (d_ram_request_busy),
     .d_ram_respond_valid    (d_ram_respond_valid),
     .d_ram_respond_data     (d_ram_respond_data),
@@ -125,67 +130,100 @@ i_cache u_i_cache (
 );
 
 d_mmu u_d_mmu (
-    .clk                   (clk),
-    .rst_n                 (rst_n),
+    .clk                     (clk),
+    .rst_n                   (rst_n),
 
-    .MPRV                  (),
-    .MXR                   (),
-    .SUM                   (),
-    .MPP                   (),
-    .privilege             (),
-    .pmpaddr0              (),
-    .pmpaddr1              (),
-    .pmpaddr2              (),
-    .pmpaddr3              (),
-    .pmpcfg0               (),
-    .satp                  (),
+    .MPRV                    (),
+    .MXR                     (),
+    .SUM                     (),
+    .MPP                     (),
+    .privilege               (),
+    .pmpaddr0                (),
+    .pmpaddr1                (),
+    .pmpaddr2                (),
+    .pmpaddr3                (),
+    .pmpcfg0                 (),
+    .satp                    (),
 
-    .d_core_request_op     (),
-    .d_core_request_f_by_va(),
-    .d_core_request_sel    (),
-    .d_core_request_vaddr  (),
-    .d_core_request_data   (),
-    .d_core_request_busy   (),
+    .d_core_request_op       (),
+    .d_core_request_f_by_va  (),
+    .d_core_request_sel      (),
+    .d_core_request_vaddr    (),
+    .d_core_request_data     (),
+    .d_core_request_busy     (),
 
-    .d_core_request_valid  (),
-    .d_core_respond_valid  (),
-    .d_core_respond_flush  (),
-    .d_core_respond_a_fault(),
-    .d_core_respond_p_fault(),
-    .d_core_respond_data   (),
+    .d_core_request_valid    (),
+    .d_core_respond_valid    (),
+    .d_core_respond_flush    (),
+    .d_core_respond_a_fault  (),
+    .d_core_respond_p_fault  (),
+    .d_core_respond_data     (),
 
-    .i_mmu_respond_done    (),
-    .i_mmu_request_flush   ()
+    .i_mmu_respond_ready     (),
+    .i_mmu_request_flush     (),
+    .i_mmu_request_f_by_va   (),
+    .i_mmu_request_vaddr     (),
+
+    .d_cache_request_busy    (),
+    .d_cache_request_op      (),
+    .d_cache_request_sel     (),
+    .d_cache_request_paddr_lo(),
+    .d_cache_request_data    (),
+
+    .d_cache_request_paddr_hi(),
+
+    .d_cache_respond_valid   (),
+    .d_cache_respond_flush   (),
+    .d_cache_respond_data    (),
+    .d_cache_request_valid   (),
+    .d_cache_request_cache   ()
 );
 
 i_mmu u_i_mmu (
-    .clk                   (clk),
-    .rst_n                 (rst_n),
+    .clk                     (clk),
+    .rst_n                   (rst_n),
 
-    .MPRV                  (),
-    .MXR                   (),
-    .SUM                   (),
-    .MPP                   (),
-    .privilege             (),
-    .pmpaddr0              (),
-    .pmpaddr1              (),
-    .pmpaddr2              (),
-    .pmpaddr3              (),
-    .pmpcfg0               (),
-    .satp                  (),
+    .MPRV                    (),
+    .MXR                     (),
+    .SUM                     (),
+    .MPP                     (),
+    .privilege               (),
+    .pmpaddr0                (),
+    .pmpaddr1                (),
+    .pmpaddr2                (),
+    .pmpaddr3                (),
+    .pmpcfg0                 (),
+    .satp                    (),
 
-    .i_core_request_vaddr  (),
-    .i_core_request_busy   (),
+    .i_core_request_vaddr    (),
+    .i_core_request_busy     (),
 
-    .i_core_request_valid  (),
-    .i_core_respond_valid  (),
-    .i_core_respond_flush  (),
-    .i_core_respond_a_fault(),
-    .i_core_respond_p_fault(),
-    .i_core_respond_data   (),
+    .i_core_request_valid    (),
+    .i_core_respond_valid    (),
+    .i_core_respond_flush    (),
+    .i_core_respond_a_fault  (),
+    .i_core_respond_p_fault  (),
+    .i_core_respond_data     (),
 
-    .d_mmu_request_flush   (),
-    .d_mmu_respond_done    ()
+    .d_mmu_request_flush     (),
+    .d_mmu_request_f_by_va   (),
+    .d_mmu_request_vaddr     (),
+    .d_mmu_respond_ready     (),
+
+    .i_cache_request_busy    (),
+    .i_cache_request_paddr_lo(),
+
+    .i_cache_request_paddr_hi(),
+
+    .i_cache_respond_valid   (),
+    .i_cache_respond_flush   (),
+    .i_cache_respond_data    (),
+    .i_cache_request_valid   (),
+
+    .d_cache_respond_valid   (),
+    .d_cache_respond_data    (),
+    .d_cache_request_valid   (),
+    .d_cache_request_paddr   ()
 );
 
 endmodule

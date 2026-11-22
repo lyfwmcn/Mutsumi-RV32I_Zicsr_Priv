@@ -9,6 +9,8 @@
  * d_mmu_request_paddr_hi: (RW valid) paddr[33:12]
  * d_mmu_request_cache:    (RW valid) 读写是否可缓存
  * d_mmu_respond_data:     (R  valid) 读出数据
+ * i_mmu_request_paddr:    paddr[33:2]
+ * i_mmu_respond_data:     读出数据
  */
 module d_cache (
     input              clk,
@@ -30,6 +32,12 @@ module d_cache (
     output             d_mmu_respond_flush,
     output     [31:0]  d_mmu_respond_data,
 
+    // i-mmu 通信
+    input              i_mmu_request_valid,
+    input      [31:0]  i_mmu_request_paddr,
+    output             i_mmu_respond_valid,
+    output     [31:0]  i_mmu_respond_data,
+
     // i-cache 通信
     input              i_cache_respond_done,
     output             i_cache_request_flush,
@@ -39,7 +47,7 @@ module d_cache (
     input              d_ram_respond_valid,
     input      [15:0]  d_ram_respond_data,
     output reg         d_ram_request_valid,
-    output reg         d_ram_request_op,    // 0: R,  1: W
+    output reg         d_ram_request_op,
     output reg [15:0]  d_ram_request_sel,
     output reg [31:0]  d_ram_request_addr,
     output reg [127:0] d_ram_request_data

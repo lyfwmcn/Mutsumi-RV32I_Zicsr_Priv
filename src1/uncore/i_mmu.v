@@ -38,7 +38,28 @@ module i_mmu (
 
     // d-mmu 通信
     input              d_mmu_request_flush,
-    output             d_mmu_respond_done
+    input              d_mmu_request_f_by_va,
+    input      [29:0]  d_mmu_request_vaddr,
+    output             d_mmu_respond_ready,
+
+    // 第一周期
+    input              i_cache_request_busy,
+    output     [9:0]   i_cache_request_paddr_lo,
+
+    // 第二周期
+    output     [21:0]  i_cache_request_paddr_hi,
+
+    // 第三周期
+    input              i_cache_respond_valid,
+    input              i_cache_respond_flush,
+    input      [31:0]  i_cache_respond_data,
+    output             i_cache_request_valid,
+
+    // d_cache 通信
+    input              d_cache_respond_valid,
+    input      [31:0]  d_cache_respond_data,
+    output             d_cache_request_valid,
+    output     [31:0]  d_cache_request_paddr
 );
 
 endmodule

@@ -13,8 +13,8 @@ module d_paddr_check (
     input              op,
     input              tlb_pwc_fill,
     input      [31:0]  paddr,
-    output reg         access_fault,
-    output reg         cached
+    output reg         a_fault,
+    output reg         cache
 );
 
 function automatic [1:0] pma;
@@ -75,29 +75,29 @@ wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, _pr
            _privilege == 2'h3;
 
 always @(posedge clk) begin
-    access_fault <= 1'h0;
-    cached       <= 1'h1;
+    a_fault <= 1'h0;
+    cache   <= 1'h1;
     if (!pmp) begin
-        access_fault <= 1'h1;
+        a_fault <= 1'h1;
     end
     else begin
         case (pma(paddr))
             2'h0: begin
                 // 未映射
-                access_fault <= 1'h1;
+                a_fault <= 1'h1;
             end
             2'h1: begin
                 // 可缓存
-                cached <= 1'h1;
+                cache <= 1'h1;
             end
             default: begin
                 // 正常访问不可缓存
                 // 走表作未映射
                 if (tlb_pwc_fill) begin
-                    access_fault <= 1'h1;
+                    a_fault <= 1'h1;
                 end
                 else begin
-                    cached <= 1'h0;
+                    cache <= 1'h0;
                 end
             end
         endcase

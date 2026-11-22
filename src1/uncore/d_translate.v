@@ -4,11 +4,11 @@ module d_translate (
     input              clk,
     input              rst_n,
 
-    input              exec,
+    input              valid,
 
     input              flush,
-    input              flush_vaddr_valid,
-    input      [19:0]  flush_vaddr,
+    input              f_by_va,
+    input      [19:0]  f_va,
 
     input              tlb_we,
     input      [3:0]   tlb_waddr,
@@ -31,10 +31,9 @@ module d_translate (
     input      [29:0]  vaddr,
     output reg         tlb_pwc_fill,
     output reg         fill_src, // 0: tlb 1: pwc
-    output reg         page_fault,
+    output reg         p_fault,
     output reg [1:0]   _privilege,
-    output reg [31:0]  paddr,
-    output reg [31:0]  pte_paddr
+    output reg [31:0]  paddr
 );
 
 reg [15:0] tlb_last_index;
@@ -60,7 +59,7 @@ always @(posedge clk or negedge rst_n) begin
                 tlb_last_index[tlb_waddr] <= 1'h1;
             end
         end
-        else if (exec && s2_tlb_used) begin
+        else if (valid && s2_tlb_used) begin
             tlb_last_index[s2_tlb_addr] <= s2_tlb_index;
         end
         if (pwc_we) begin
@@ -77,7 +76,7 @@ always @(posedge clk or negedge rst_n) begin
                 pwc_last_index[pwc_waddr] <= 1'h1;
             end
         end
-        else if (exec && s2_pwc_used) begin
+        else if (valid && s2_pwc_used) begin
             pwc_last_index[s2_pwc_addr] <= s2_pwc_index;
         end
     end
@@ -108,12 +107,12 @@ always @(posedge clk or negedge rst_n) begin
         tlb_valid1 <= 16'h0;
     end
     else if (flush) begin
-        if (flush_vaddr_valid) begin
-            if (tlb_tag0[flush_vaddr[3:0]][25:10] == flush_vaddr[19:4]) begin
-                tlb_valid0[flush_vaddr[3:0]] <= 1'h0;
+        if (f_by_va) begin
+            if (tlb_tag0[f_va[3:0]][25:10] == f_va[19:4]) begin
+                tlb_valid0[f_va[3:0]] <= 1'h0;
             end
-            if (tlb_tag1[flush_vaddr[3:0]][25:10] == flush_vaddr[19:4]) begin
-                tlb_valid1[flush_vaddr[3:0]] <= 1'h0;
+            if (tlb_tag1[f_va[3:0]][25:10] == f_va[19:4]) begin
+                tlb_valid1[f_va[3:0]] <= 1'h0;
             end
         end
         else begin
@@ -184,12 +183,12 @@ always @(posedge clk or negedge rst_n) begin
         pwc_valid1 <= 4'h0;
     end
     else if (flush) begin
-        if (flush_vaddr_valid) begin
-            if (pwc_tag0[flush_vaddr[11:10]][16:9] == flush_vaddr[19:12]) begin
-                pwc_valid0[flush_vaddr[11:10]] <= 1'h0;
+        if (f_by_va) begin
+            if (pwc_tag0[f_va[11:10]][16:9] == f_va[19:12]) begin
+                pwc_valid0[f_va[11:10]] <= 1'h0;
             end
-            if (pwc_tag1[flush_vaddr[11:10]][16:9] == flush_vaddr[19:12]) begin
-                pwc_valid1[flush_vaddr[11:10]] <= 1'h0;
+            if (pwc_tag1[f_va[11:10]][16:9] == f_va[19:12]) begin
+                pwc_valid1[f_va[11:10]] <= 1'h0;
             end
         end
         else begin
@@ -328,7 +327,7 @@ reg s2_pwc_index;
 reg [1:0] s2_pwc_addr;
 
 always @(posedge clk) begin
-    page_fault   <= 1'h0;
+    p_fault   <= 1'h0;
     tlb_pwc_fill <= 1'h0;
     fill_src     <= 1'h0;
     _privilege   <= eff_privilege;
@@ -359,7 +358,7 @@ always @(posedge clk) begin
         else begin
             // 权限错误，直接响应
             paddr <= tlb_paddr;
-            page_fault <= 1'h1;
+            p_fault <= 1'h1;
         end
     end
     else if (pwc_hit) begin
@@ -368,7 +367,7 @@ always @(posedge clk) begin
             // 填充 TLB，申请 d-cache
             tlb_pwc_fill <= 1'h1;
             fill_src <= 1'h0;
-            pte_paddr <= pwc_index ? {pwc_out1[31:10], vaddr[19:10]} : {pwc_out0[31:10], vaddr[19:10]};
+            paddr <= pwc_index ? {pwc_out1[31:10], vaddr[19:10]} : {pwc_out0[31:10], vaddr[19:10]};
             // pma 检查
         end
         else if (pwc_pte) begin
@@ -379,14 +378,14 @@ always @(posedge clk) begin
         else begin
             // 权限错误，直接响应
             paddr <= pwc_paddr;
-            page_fault <= 1'h1;
+            p_fault <= 1'h1;
         end
     end
     else begin
         // 填充 PWC，申请 d-cache
         tlb_pwc_fill <= 1'h1;
         fill_src <= 1'h1;
-        pte_paddr <= {satp[21:0], vaddr[29:20]};
+        paddr <= {satp[21:0], vaddr[29:20]};
         // pma 检查
     end
 end
