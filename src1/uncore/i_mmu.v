@@ -39,7 +39,7 @@ module i_mmu (
     // d-mmu 通信
     input              d_mmu_request_flush,
     input              d_mmu_request_f_by_va,
-    input      [29:0]  d_mmu_request_vaddr,
+    input      [19:0]  d_mmu_request_vaddr,
     output             d_mmu_respond_ready,
 
     // 第一周期

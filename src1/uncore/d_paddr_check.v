@@ -11,10 +11,12 @@ module d_paddr_check (
     input      [31:0]  pmpcfg0,
 
     input              op,
-    input              tlb_pwc_fill,
+    input              tp_fill,
     input      [31:0]  paddr,
-    output reg         a_fault,
-    output reg         cache
+    output             s1_op,
+    output reg         s1_tp_fill,
+    output reg         s1_a_fault,
+    output reg         s1_cache
 );
 
 function automatic [1:0] pma;
@@ -65,43 +67,44 @@ function automatic pmp_fit;
     end
 endfunction
 
-wire _op = tlb_pwc_fill ? 1'h0 : op;
-wire [1:0] _privilege = tlb_pwc_fill ? 2'h1 : privilege;
+assign s1_op = tp_fill ? 1'h0 : op;
+wire [1:0] _privilege = tp_fill ? 2'h1 : privilege;
 
-wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(_op, _privilege, pmpcfg0[7:0]  ) :
-           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(_op, _privilege, pmpcfg0[15:8] ) :
-           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(_op, _privilege, pmpcfg0[23:16]) :
-           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(_op, _privilege, pmpcfg0[31:24]) :
+wire pmp = pmp_hit(paddr, pmpcfg0[7:0],   32'h0,    pmpaddr0) ? pmp_fit(s1_op, _privilege, pmpcfg0[7:0]  ) :
+           pmp_hit(paddr, pmpcfg0[15:8],  pmpaddr0, pmpaddr1) ? pmp_fit(s1_op, _privilege, pmpcfg0[15:8] ) :
+           pmp_hit(paddr, pmpcfg0[23:16], pmpaddr1, pmpaddr2) ? pmp_fit(s1_op, _privilege, pmpcfg0[23:16]) :
+           pmp_hit(paddr, pmpcfg0[31:24], pmpaddr2, pmpaddr3) ? pmp_fit(s1_op, _privilege, pmpcfg0[31:24]) :
            _privilege == 2'h3;
 
-always @(posedge clk) begin
-    a_fault <= 1'h0;
-    cache   <= 1'h1;
+always @(*) begin
+    s1_a_fault = 1'h0;
+    s1_cache   = 1'h1;
     if (!pmp) begin
-        a_fault <= 1'h1;
+        s1_a_fault = 1'h1;
     end
     else begin
         case (pma(paddr))
             2'h0: begin
                 // 未映射
-                a_fault <= 1'h1;
+                s1_a_fault = 1'h1;
             end
             2'h1: begin
                 // 可缓存
-                cache <= 1'h1;
+                s1_cache = 1'h1;
             end
             default: begin
                 // 正常访问不可缓存
                 // 走表作未映射
-                if (tlb_pwc_fill) begin
-                    a_fault <= 1'h1;
+                if (tp_fill) begin
+                    s1_a_fault = 1'h1;
                 end
                 else begin
-                    cache <= 1'h0;
+                    s1_cache = 1'h0;
                 end
             end
         endcase
     end
+    s1_tp_fill = s1_a_fault ? 1'h0 : tp_fill;
 end
 
 endmodule
